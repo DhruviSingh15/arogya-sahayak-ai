@@ -30,7 +30,7 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
     const userMessage: Message = {
@@ -41,21 +41,45 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputText;
+    setInputText('');
 
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse: Message = {
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentInput,
+          language: language
+        }),
+      });
+
+      const data = await response.json();
+      
+      const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: language === 'hi'
-          ? 'मैं आपके प्रश्न को समझ रहा हूं। कृपया थोड़ा इंतज़ार करें जबकि मैं आपके लिए उत्तर खोजता हूं।'
-          : 'I understand your question. Please wait while I search for the answer.',
+        text: data.response || (language === 'hi' 
+          ? "क्षमा करें, मैं आपकी मदद नहीं कर सका।"
+          : "Sorry, I couldn't help you at the moment."),
         sender: 'bot',
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
-
-    setInputText('');
+      
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: language === 'hi' 
+          ? "कनेक्शन में समस्या है। कृपया बाद में कोशिश करें।"
+          : "Connection issue. Please try again later.",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   };
 
   const handleVoiceInput = () => {

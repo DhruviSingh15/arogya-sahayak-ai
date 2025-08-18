@@ -3,6 +3,9 @@ import { Header } from "./Header";
 import { EmergencySection } from "./EmergencySection";
 import { FeatureCard } from "./FeatureCard";
 import { ChatInterface } from "../chat/ChatInterface";
+import { DocumentGenerator } from "../document/DocumentGenerator";
+import { PdfAnalyzer } from "../pdf/PdfAnalyzer";
+import { LegalArticles } from "../legal/LegalArticles";
 import { 
   MessageSquare, 
   FileText, 
@@ -37,30 +40,30 @@ export function Dashboard() {
       id: 'documents',
       title: language === 'hi' ? 'दस्तावेज़ बनाएं' : 'Generate Documents',
       description: language === 'hi'
-        ? 'RTI, FIR, शिकायत पत्र और अन्य कानूनी दस्तावेज़ बनाएं'
-        : 'Create RTI, FIR, complaint letters and other legal documents',
+        ? 'शिकायत पत्र, आवेदन और कानूनी नोटिस बनाएं'
+        : 'Create complaint letters, applications and legal notices',
       icon: FileText,
       buttonText: language === 'hi' ? 'दस्तावेज़ बनाएं' : 'Create Document',
       variant: 'secondary' as const
     },
     {
       id: 'rights',
-      title: language === 'hi' ? 'अपने अधिकार जानें' : 'Know Your Rights',
+      title: language === 'hi' ? 'कानूनी लेख' : 'Legal Articles',
       description: language === 'hi'
-        ? 'भारत में मरीज़ों के अधिकार और कानूनी सुरक्षा के बारे में जानें'
-        : 'Learn about patient rights and legal protections in India',
+        ? 'स्वास्थ्य अधिकारों पर नवीनतम कानूनी जानकारी और लेख'
+        : 'Latest legal information and articles on health rights',
       icon: Scale,
-      buttonText: language === 'hi' ? 'अधिकार देखें' : 'View Rights',
+      buttonText: language === 'hi' ? 'लेख देखें' : 'View Articles',
       variant: 'accent' as const
     },
     {
-      id: 'insurance',
-      title: language === 'hi' ? 'बीमा सहायता' : 'Insurance Help',
+      id: 'pdf-analysis',
+      title: language === 'hi' ? 'PDF विश्लेषण' : 'PDF Analysis',
       description: language === 'hi'
-        ? 'बीमा पॉलिसी समझें और क्लेम की प्रक्रिया जानें'
-        : 'Understand insurance policies and claim processes',
-      icon: Shield,
-      buttonText: language === 'hi' ? 'बीमा गाइड' : 'Insurance Guide',
+        ? 'बीमा पॉलिसी और चिकित्सा दस्तावेजों का विश्लेषण करें'
+        : 'Analyze insurance policies and medical documents',
+      icon: FileSearch,
+      buttonText: language === 'hi' ? 'PDF विश्लेषण' : 'Analyze PDF',
       variant: 'primary' as const
     },
     {
@@ -95,6 +98,24 @@ export function Dashboard() {
         return (
           <div className="max-w-4xl mx-auto">
             <ChatInterface language={language} />
+          </div>
+        );
+      case 'documents':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <DocumentGenerator language={language} />
+          </div>
+        );
+      case 'pdf-analysis':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <PdfAnalyzer language={language} />
+          </div>
+        );
+      case 'rights':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <LegalArticles language={language} />
           </div>
         );
       default:
