@@ -7,34 +7,64 @@ All colors MUST be HSL.
 */
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+:root {
+    /* Indian tricolor inspired palette */
+    --background: 0 0% 99%;
+    --foreground: 220 20% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 20% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 20% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Saffron primary - represents courage and sacrifice */
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 25 100% 70%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Deep blue secondary - represents truth and loyalty */
+    --secondary: 220 45% 25%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
+    /* Forest green accent - represents fertility and growth */
+    --accent: 140 60% 35%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 210 40% 98%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 25 95% 53%;
+
+    /* Emergency colors */
+    --emergency: 0 85% 60%;
+    --emergency-foreground: 0 0% 100%;
+
+    /* Success colors */
+    --success: 140 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning colors */
+    --warning: 45 95% 55%;
+    --warning-foreground: 220 20% 15%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--secondary)) 100%);
+
+    /* Shadows */
+    --shadow-elevated: 0 10px 30px -10px hsl(var(--primary) / 0.2);
+    --shadow-soft: 0 4px 20px -2px hsl(220 20% 15% / 0.08);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --radius: 0.5rem;
 
