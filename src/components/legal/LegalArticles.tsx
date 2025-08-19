@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Scale, Search, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LegalArticlesProps {
   language: 'en' | 'hi';
@@ -52,18 +53,14 @@ export function LegalArticles({ language }: LegalArticlesProps) {
 
     setIsSearching(true);
     try {
-      const response = await fetch('/api/legal-articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('legal-articles', {
+        body: {
           topic: searchQuery,
           language,
-        }),
+        },
       });
 
-      const data = await response.json();
+      if (error) throw error;
       
       if (data.article) {
         setArticle(data.article);

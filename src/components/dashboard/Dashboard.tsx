@@ -6,6 +6,8 @@ import { ChatInterface } from "../chat/ChatInterface";
 import { DocumentGenerator } from "../document/DocumentGenerator";
 import { PdfAnalyzer } from "../pdf/PdfAnalyzer";
 import { LegalArticles } from "../legal/LegalArticles";
+import { MedicalGuidance } from "../medical/MedicalGuidance";
+import { LegalAssistance } from "../legal/LegalAssistance";
 import { 
   MessageSquare, 
   FileText, 
@@ -116,6 +118,18 @@ export function Dashboard() {
         return (
           <div className="max-w-4xl mx-auto">
             <LegalArticles language={language} />
+          </div>
+        );
+      case 'medical':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <MedicalGuidance language={language} />
+          </div>
+        );
+      case 'legal':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <LegalAssistance language={language} />
           </div>
         );
       default:
