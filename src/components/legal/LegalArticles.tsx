@@ -60,7 +60,15 @@ export function LegalArticles({ language }: LegalArticlesProps) {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Legal articles error:', error);
+        throw new Error(error.message || 'Failed to get legal information');
+      }
+
+      if (!data?.article) {
+        console.error('No article in response:', data);
+        throw new Error('No article received');
+      }
       
       if (data.article) {
         setArticle(data.article);

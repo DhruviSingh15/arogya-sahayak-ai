@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileText, Upload, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PdfAnalyzerProps {
   language: 'en' | 'hi';
@@ -59,20 +60,23 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
     try {
       const fileData = await convertFileToBase64(selectedFile);
       
-      const response = await fetch('/api/analyze-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('analyze-pdf', {
+        body: {
           fileData,
           question,
           language,
-        }),
+        },
       });
 
-      const data = await response.json();
-      
+      if (error) {
+        console.error('PDF analysis error:', error);
+        throw new Error(error.message || 'Failed to analyze PDF');
+      }
+
+      if (!data?.analysis) {
+        console.error('No analysis in response:', data);
+        throw new Error('No analysis received');
+      }
       if (data.analysis) {
         setAnalysis(data.analysis);
         toast({

@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Mic, Bot, User } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -45,24 +46,25 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
     setInputText('');
 
     try {
-      const response = await fetch('/api/ai-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
           message: currentInput,
           language: language
-        }),
+        },
       });
 
-      const data = await response.json();
+      if (error) {
+        console.error('AI Chat error:', error);
+        throw new Error(error.message || 'Failed to get AI response');
+      }
+
+      const data_response = data?.response || (language === 'hi' 
+        ? "क्षमा करें, मैं आपकी मदद नहीं कर सका।"
+        : "Sorry, I couldn't help you at the moment.");
       
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || (language === 'hi' 
-          ? "क्षमा करें, मैं आपकी मदद नहीं कर सका।"
-          : "Sorry, I couldn't help you at the moment."),
+        text: data_response,
         sender: 'bot',
         timestamp: new Date()
       };

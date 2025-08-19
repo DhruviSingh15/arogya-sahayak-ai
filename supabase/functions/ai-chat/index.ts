@@ -23,7 +23,7 @@ serve(async (req) => {
       ? "आप एक सहायक AI असिस्टेंट हैं जो स्वास्थ्य अधिकार और कानूनी सहायता के बारे में जानकारी प्रदान करते हैं। हिंदी में संक्षिप्त और सहायक उत्तर दें।"
       : "You are a helpful AI assistant providing information about health rights and legal assistance. Provide concise and helpful responses in English.";
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

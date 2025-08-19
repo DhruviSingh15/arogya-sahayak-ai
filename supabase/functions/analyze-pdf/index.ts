@@ -23,7 +23,7 @@ serve(async (req) => {
       ? "आप एक PDF विश्लेषक हैं। दस्तावेज़ का विश्लेषण करें और उपयोगकर्ता के प्रश्न का उत्तर दें।"
       : "You are a PDF analyzer. Analyze the document and answer the user's question.";
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileText, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DocumentGeneratorProps {
   language: 'en' | 'hi';
@@ -43,19 +44,18 @@ export function DocumentGenerator({ language }: DocumentGeneratorProps) {
 
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/generate-document', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('generate-document', {
+        body: {
           documentType,
           details,
           language,
-        }),
+        },
       });
 
-      const data = await response.json();
+      if (error) {
+        console.error('Document generation error:', error);
+        throw new Error(error.message || 'Failed to generate document');
+      }
       
       if (data.document) {
         setGeneratedDocument(data.document);
