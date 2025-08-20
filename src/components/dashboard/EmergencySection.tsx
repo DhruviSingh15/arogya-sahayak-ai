@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Phone, AlertTriangle, Heart, Shield } from "lucide-react";
+import { Phone, AlertTriangle, Heart, Shield, Zap } from "lucide-react";
+import { EmergencyGuidance } from "../emergency/EmergencyGuidance";
 
 interface EmergencySectionProps {
   language: 'en' | 'hi';
 }
 
 export function EmergencySection({ language }: EmergencySectionProps) {
+  const [showSOSMode, setShowSOSMode] = useState(false);
   const emergencyNumbers = [
     { 
       number: "108", 
@@ -40,6 +43,27 @@ export function EmergencySection({ language }: EmergencySectionProps) {
     }
   };
 
+  if (showSOSMode) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            onClick={() => setShowSOSMode(false)}
+          >
+            ← {language === 'hi' ? 'वापस जाएं' : 'Back'}
+          </Button>
+          <div className="animate-pulse">
+            <h2 className="text-2xl font-bold text-emergency">
+              {language === 'hi' ? '🚨 SOS मोड सक्रिय' : '🚨 SOS Mode Active'}
+            </h2>
+          </div>
+        </div>
+        <EmergencyGuidance language={language} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -50,6 +74,25 @@ export function EmergencySection({ language }: EmergencySectionProps) {
           {language === 'hi' 
             ? 'तत्काल सहायता के लिए नीचे दिए गए नंबरों पर कॉल करें' 
             : 'Call the numbers below for immediate assistance'
+          }
+        </p>
+      </div>
+
+      {/* SOS Mode Button */}
+      <div className="text-center">
+        <Button
+          variant="emergency"
+          size="lg"
+          onClick={() => setShowSOSMode(true)}
+          className="animate-pulse-glow text-xl py-6 px-8"
+        >
+          <Zap className="w-6 h-6 mr-3" />
+          {language === 'hi' ? 'SOS मोड - तत्काल कानूनी सहायता' : 'SOS Mode - Instant Legal Help'}
+        </Button>
+        <p className="text-sm text-muted-foreground mt-2">
+          {language === 'hi' 
+            ? 'अस्पताल द्वारा इलाज से मना करने पर तुरंत कानूनी नोटिस तैयार करें'
+            : 'Generate instant legal notices when hospitals refuse treatment'
           }
         </p>
       </div>

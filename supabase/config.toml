@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.dual-domain-reasoning]
 verify_jwt = false
+
+[functions.emergency-guidance]
+verify_jwt = false
