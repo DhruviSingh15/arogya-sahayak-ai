@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Stethoscope, Search, Heart, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { DualDomainDisplay } from '@/components/fusion/DualDomainDisplay';
 
 interface MedicalGuidanceProps {
   language: 'en' | 'hi';
@@ -15,6 +16,8 @@ interface MedicalGuidanceProps {
 export function MedicalGuidance({ language }: MedicalGuidanceProps) {
   const [symptoms, setSymptoms] = useState('');
   const [guidance, setGuidance] = useState('');
+  const [medicalAnalysis, setMedicalAnalysis] = useState('');
+  const [legalAnalysis, setLegalAnalysis] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
@@ -57,9 +60,9 @@ export function MedicalGuidance({ language }: MedicalGuidanceProps) {
         ? `मैं ${symptomQuery} के लक्षण महसूस कर रहा हूं। कृपया सामान्य चिकित्सा सलाह और घरेलू उपचार बताएं। यह केवल सामान्य जानकारी है, गंभीर मामलों में डॉक्टर से संपर्क करें।`
         : `I'm experiencing symptoms of ${symptomQuery}. Please provide general medical advice and home remedies. This is for general information only, consult a doctor for serious cases.`;
 
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
+      const { data, error } = await supabase.functions.invoke('dual-domain-reasoning', {
         body: {
-          message: prompt,
+          query: prompt,
           language,
         },
       });
@@ -67,6 +70,8 @@ export function MedicalGuidance({ language }: MedicalGuidanceProps) {
       if (error) throw error;
 
       setGuidance(data.response);
+      setMedicalAnalysis(data.medicalAnalysis || '');
+      setLegalAnalysis(data.legalAnalysis || '');
       toast({
         title: language === 'hi' ? 'सफलता' : 'Success',
         description: language === 'hi' ? 'चिकित्सा सलाह मिल गई' : 'Medical guidance received',
@@ -164,21 +169,12 @@ export function MedicalGuidance({ language }: MedicalGuidanceProps) {
       </Card>
 
       {guidance && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5" />
-              {language === 'hi' ? 'चिकित्सा सलाह' : 'Medical Advice'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none bg-muted p-4 rounded-lg">
-              <div className="whitespace-pre-wrap text-sm">
-                {guidance}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DualDomainDisplay 
+          response={guidance}
+          medicalAnalysis={medicalAnalysis}
+          legalAnalysis={legalAnalysis}
+          language={language}
+        />
       )}
     </div>
   );

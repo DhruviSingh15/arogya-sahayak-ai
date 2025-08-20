@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.legal-articles]
 verify_jwt = false
+
+[functions.dual-domain-reasoning]
+verify_jwt = false

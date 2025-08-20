@@ -21,8 +21,8 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
     {
       id: '1',
       text: language === 'hi' 
-        ? 'नमस्कार! मैं आपका स्वास्थ्य अधिकार सहायक हूं। कैसे मदद कर सकता हूं?' 
-        : 'Hello! I am your Healthcare Rights Assistant. How can I help you?',
+        ? 'नमस्कार! मैं आपका डुअल-डोमेन AI असिस्टेंट हूं। मैं स्वास्थ्य और कानूनी दोनों दृष्टिकोणों से आपकी सहायता करूंगा।' 
+        : 'Hello! I am your Dual-Domain AI Assistant. I will help you with both medical and legal perspectives.',
       sender: 'bot',
       timestamp: new Date()
     }
@@ -46,15 +46,15 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
     setInputText('');
 
     try {
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
+      const { data, error } = await supabase.functions.invoke('dual-domain-reasoning', {
         body: {
-          message: currentInput,
+          query: currentInput,
           language: language
         },
       });
 
       if (error) {
-        console.error('AI Chat error:', error);
+        console.error('Dual-domain reasoning error:', error);
         throw new Error(error.message || 'Failed to get AI response');
       }
 
@@ -109,7 +109,7 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
       <div className="bg-gradient-hero p-4 rounded-t-lg">
         <h3 className="text-primary-foreground font-semibold flex items-center">
           <Bot className="w-5 h-5 mr-2" />
-          {language === 'hi' ? 'AI सहायक से बात करें' : 'Chat with AI Assistant'}
+          {language === 'hi' ? 'डुअल-डोमेन AI असिस्टेंट' : 'Dual-Domain AI Assistant'}
         </h3>
       </div>
 

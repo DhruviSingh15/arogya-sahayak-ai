@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Scale, Search, FileText, Gavel } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { DualDomainDisplay } from '@/components/fusion/DualDomainDisplay';
 
 interface LegalAssistanceProps {
   language: 'en' | 'hi';
@@ -16,6 +17,8 @@ interface LegalAssistanceProps {
 export function LegalAssistance({ language }: LegalAssistanceProps) {
   const [legalIssue, setLegalIssue] = useState('');
   const [assistance, setAssistance] = useState('');
+  const [medicalAnalysis, setMedicalAnalysis] = useState('');
+  const [legalAnalysis, setLegalAnalysis] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
@@ -58,9 +61,9 @@ export function LegalAssistance({ language }: LegalAssistanceProps) {
         ? `मेरी कानूनी समस्या है: ${legalQuery}। कृपया भारतीय कानून के अनुसार कानूनी सलाह और समाधान के तरीके बताएं। संबंधित धाराएं और उपलब्ध विकल्प भी बताएं।`
         : `I have a legal issue: ${legalQuery}. Please provide legal advice and solution methods according to Indian law. Also mention relevant sections and available options.`;
 
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
+      const { data, error } = await supabase.functions.invoke('dual-domain-reasoning', {
         body: {
-          message: prompt,
+          query: prompt,
           language,
         },
       });
@@ -68,6 +71,8 @@ export function LegalAssistance({ language }: LegalAssistanceProps) {
       if (error) throw error;
 
       setAssistance(data.response);
+      setMedicalAnalysis(data.medicalAnalysis || '');
+      setLegalAnalysis(data.legalAnalysis || '');
       toast({
         title: language === 'hi' ? 'सफलता' : 'Success',
         description: language === 'hi' ? 'कानूनी सहायता मिल गई' : 'Legal assistance received',
@@ -153,30 +158,23 @@ export function LegalAssistance({ language }: LegalAssistanceProps) {
       </Card>
 
       {assistance && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {language === 'hi' ? 'कानूनी सलाह' : 'Legal Advice'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none bg-muted p-4 rounded-lg">
-              <div className="whitespace-pre-wrap text-sm">
-                {assistance}
-              </div>
-            </div>
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>{language === 'hi' ? 'नोट:' : 'Note:'}</strong>{' '}
-                {language === 'hi' 
-                  ? 'यह सामान्य कानूनी जानकारी है। विशिष्ट मामलों के लिए योग्य वकील से सलाह लें।'
-                  : 'This is general legal information. Consult a qualified lawyer for specific cases.'
-                }
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <DualDomainDisplay 
+            response={assistance}
+            medicalAnalysis={medicalAnalysis}
+            legalAnalysis={legalAnalysis}
+            language={language}
+          />
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>{language === 'hi' ? 'नोट:' : 'Note:'}</strong>{' '}
+              {language === 'hi' 
+                ? 'यह सामान्य कानूनी जानकारी है। विशिष्ट मामलों के लिए योग्य वकील से सलाह लें।'
+                : 'This is general legal information. Consult a qualified lawyer for specific cases.'
+              }
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
