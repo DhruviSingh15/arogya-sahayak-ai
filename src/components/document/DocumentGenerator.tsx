@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,7 +14,7 @@ interface DocumentGeneratorProps {
 }
 
 export function DocumentGenerator({ language }: DocumentGeneratorProps) {
-  const [documentType, setDocumentType] = useState('');
+  const [documentType, setDocumentType] = useState('auto');
   const [details, setDetails] = useState({
     name: '',
     address: '',
@@ -22,21 +22,52 @@ export function DocumentGenerator({ language }: DocumentGeneratorProps) {
     description: '',
     date: new Date().toISOString().split('T')[0],
   });
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [generatedDocument, setGeneratedDocument] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const documentTypes = {
-    complaint: language === 'hi' ? 'शिकायत पत्र' : 'Complaint Letter',
-    application: language === 'hi' ? 'आवेदन पत्र' : 'Application',
-    notice: language === 'hi' ? 'कानूनी नोटिस' : 'Legal Notice',
+const documentTypes = {
+  auto: language === 'hi' ? 'ऑटो (सर्वश्रेष्ठ टेम्पलेट चुनें)' : 'Auto (detect best template)',
+  consumer_complaint: language === 'hi' ? 'उपभोक्ता शिकायत' : 'Consumer Complaint',
+  complaint: language === 'hi' ? 'शिकायत पत्र' : 'Complaint Letter',
+  notice: language === 'hi' ? 'कानूनी नोटिस' : 'Legal Notice',
+  application: language === 'hi' ? 'आवेदन पत्र' : 'Application',
+  fir: language === 'hi' ? 'एफआईआर प्रारूप' : 'FIR Draft',
+  rti: language === 'hi' ? 'आरटीआई आवेदन' : 'RTI Application',
+};
+
+  // Convert selected evidence files to base64 payloads
+  const convertFilesToBase64 = async (files: File[]) => {
+    const promises = files.map(
+      (file) =>
+        new Promise<{ mimeType: string; data: string }>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            const base64 = (reader.result as string).split(',')[1] || '';
+            resolve({ mimeType: file.type, data: base64 });
+          };
+          reader.onerror = (e) => reject(e);
+        })
+    );
+    return Promise.all(promises);
+  };
+
+  const handleEvidenceSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setEvidenceFiles(files);
   };
 
   const handleGenerate = async () => {
-    if (!documentType || !details.name || !details.subject) {
+    const hasEvidence = evidenceFiles.length > 0;
+    if (!documentType || (!hasEvidence && (!details.name || !details.subject))) {
       toast({
         title: language === 'hi' ? 'त्रुटि' : 'Error',
-        description: language === 'hi' ? 'कृपया सभी आवश्यक फ़ील्ड भरें' : 'Please fill all required fields',
+        description:
+          language === 'hi'
+            ? 'कृपया आवश्यक फ़ील्ड भरें या प्रमाण (PDF/छवि) अपलोड करें'
+            : 'Please fill required fields or upload evidence (PDF/Image)',
         variant: 'destructive',
       });
       return;
@@ -44,11 +75,14 @@ export function DocumentGenerator({ language }: DocumentGeneratorProps) {
 
     setIsGenerating(true);
     try {
+      const evidence = hasEvidence ? await convertFilesToBase64(evidenceFiles) : [];
+
       const { data, error } = await supabase.functions.invoke('generate-document', {
         body: {
           documentType,
           details,
           language,
+          evidence,
         },
       });
 
@@ -56,12 +90,24 @@ export function DocumentGenerator({ language }: DocumentGeneratorProps) {
         console.error('Document generation error:', error);
         throw new Error(error.message || 'Failed to generate document');
       }
-      
-      if (data.document) {
+
+      if (data?.document) {
         setGeneratedDocument(data.document);
+        // If backend extracted details, auto-fill missing fields for convenience
+        if (data?.extracted) {
+          setDetails((prev) => ({
+            ...prev,
+            name: prev.name || data.extracted.patient_name || prev.name,
+            address: prev.address || data.extracted.patient_address || prev.address,
+            subject: prev.subject || data.extracted.derived_subject || prev.subject,
+          }));
+        }
         toast({
           title: language === 'hi' ? 'सफलता' : 'Success',
-          description: language === 'hi' ? 'दस्तावेज़ तैयार हो गया' : 'Document generated successfully',
+          description:
+            language === 'hi'
+              ? 'दस्तावेज़ तैयार हो गया' + (data?.selectedTemplate ? ` • ${data.selectedTemplate}` : '')
+              : 'Document generated successfully' + (data?.selectedTemplate ? ` • ${data.selectedTemplate}` : ''),
         });
       } else {
         throw new Error('Failed to generate document');
@@ -100,22 +146,51 @@ export function DocumentGenerator({ language }: DocumentGeneratorProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="document-type">
-              {language === 'hi' ? 'दस्तावेज़ का प्रकार' : 'Document Type'}
-            </Label>
-            <Select value={documentType} onValueChange={setDocumentType}>
-              <SelectTrigger>
-                <SelectValue placeholder={language === 'hi' ? 'प्रकार चुनें' : 'Select type'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(documentTypes).map(([key, value]) => (
-                  <SelectItem key={key} value={key}>
-                    {value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="document-type">
+                {language === 'hi' ? 'दस्तावेज़ का प्रकार' : 'Document Type'}
+              </Label>
+              <Select value={documentType} onValueChange={setDocumentType}>
+                <SelectTrigger>
+                  <SelectValue placeholder={language === 'hi' ? 'प्रकार चुनें' : 'Select type'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(documentTypes).map(([key, value]) => (
+                    <SelectItem key={key} value={key}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="evidence">
+                {language === 'hi' ? 'प्रमाण (PDF/छवियाँ)' : 'Evidence (PDFs/Images)'}
+              </Label>
+              <div className="flex items-center gap-4 mt-2">
+                <Input
+                  id="evidence"
+                  type="file"
+                  accept=".pdf,image/*"
+                  multiple
+                  onChange={handleEvidenceSelect}
+                  className="flex-1"
+                />
+                <Upload className="h-5 w-5 text-muted-foreground" />
+              </div>
+              {evidenceFiles.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  {language === 'hi' ? 'संलग्न फ़ाइलें:' : 'Attached files:'} {evidenceFiles.length}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {language === 'hi'
+                  ? 'हम मरीज का विवरण निकालकर उल्लंघन प्रकार पहचानेंगे और सही टेम्पलेट चुनेंगे।'
+                  : "We'll auto-extract patient details, detect violation type, and pick the right template."}
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
