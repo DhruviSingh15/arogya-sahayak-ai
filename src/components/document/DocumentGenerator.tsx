@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileText, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ExplainabilityCard, ExplanationData } from '@/components/ai/ExplainabilityCard';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DocumentGeneratorProps {
@@ -24,6 +25,7 @@ export function DocumentGenerator({ language }: DocumentGeneratorProps) {
   });
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [generatedDocument, setGeneratedDocument] = useState('');
+  const [explanation, setExplanation] = useState<ExplanationData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -93,6 +95,7 @@ const documentTypes = {
 
       if (data?.document) {
         setGeneratedDocument(data.document);
+        setExplanation(data?.explanation || null);
         // If backend extracted details, auto-fill missing fields for convenience
         if (data?.extracted) {
           setDetails((prev) => ({
@@ -281,10 +284,17 @@ const documentTypes = {
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
               {generatedDocument}
             </div>
+            {explanation && (
+              <ExplainabilityCard 
+                data={explanation} 
+                language={language}
+                title={language === 'hi' ? 'दस्तावेज़ आधार स्पष्टीकरण' : 'Document Basis Explanation'}
+              />
+            )}
           </CardContent>
         </Card>
       )}

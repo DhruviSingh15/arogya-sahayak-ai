@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Mic, Bot, User } from "lucide-react";
+import { ExplainabilityCard, ExplanationData } from '@/components/ai/ExplainabilityCard';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
@@ -10,6 +11,7 @@ interface Message {
   text: string;
   sender: 'user' | 'bot';
   timestamp: Date;
+  explanation?: ExplanationData;
 }
 
 interface ChatInterfaceProps {
@@ -46,15 +48,15 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
     setInputText('');
 
     try {
-      const { data, error } = await supabase.functions.invoke('dual-domain-reasoning', {
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
-          query: currentInput,
+          message: currentInput,
           language: language
         },
       });
 
       if (error) {
-        console.error('Dual-domain reasoning error:', error);
+        console.error('AI chat error:', error);
         throw new Error(error.message || 'Failed to get AI response');
       }
 
@@ -66,7 +68,8 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
         id: (Date.now() + 1).toString(),
         text: data_response,
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        explanation: data?.explanation
       };
       
       setMessages(prev => [...prev, botMessage]);
@@ -127,15 +130,26 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
                   : 'bg-muted text-foreground'
               }`}
             >
-              <div className="flex items-start space-x-2">
-                {message.sender === 'bot' && (
-                  <Bot className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                )}
-                <p className="text-sm">{message.text}</p>
-                {message.sender === 'user' && (
-                  <User className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                )}
-              </div>
+                <div className="flex items-start space-x-2">
+                  {message.sender === 'bot' && (
+                    <Bot className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm">{message.text}</p>
+                    {message.explanation && (
+                      <div className="mt-3">
+                        <ExplainabilityCard 
+                          data={message.explanation} 
+                          language={language}
+                          title={language === 'hi' ? 'AI स्पष्टीकरण' : 'AI Explanation'}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {message.sender === 'user' && (
+                    <User className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  )}
+                </div>
             </div>
           </div>
         ))}

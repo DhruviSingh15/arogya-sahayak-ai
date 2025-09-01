@@ -111,10 +111,10 @@ serve(async (req) => {
 
     const selectedTemplate = pickTemplate(documentType, extracted?.violation_type || null);
 
-    // Step 3: Build prompt for the selected template
+    // Step 3: Build prompt for the selected template with explainability
     const baseContext = language === 'hi'
-      ? 'आप एक सहायक कानूनी-स्वास्थ्य सहायक हैं। नीचे दिए गए विवरण और प्रमाण का उपयोग करके एक औपचारिक मसौदा तैयार करें।'
-      : 'You are a helpful legal-health assistant. Using the details and evidence below, draft a formal document.';
+      ? 'आप एक सहायक कानूनी-स्वास्थ्य सहायक हैं। दस्तावेज़ के साथ-साथ स्पष्टीकरण भी प्रदान करें।'
+      : 'You are a helpful legal-health assistant. Provide explainable outputs with the document.';
 
     const templatePrompts: Record<string, string> = {
       consumer_complaint: language === 'hi'
@@ -138,8 +138,8 @@ serve(async (req) => {
     };
 
     const instruction = language === 'hi'
-      ? `${baseContext}\n\nटेम्पलेट: ${templatePrompts[selectedTemplate]}\n\nउपयोगकर्ता विवरण: ${JSON.stringify(details)}\n\nनिकाले गए विवरण: ${JSON.stringify(extracted || {})}\n\nनिर्देश:\n- औपचारिक हेडर, विषय, संबोधन, तथ्य, कानूनी आधार (IRDAI नियम/उपभोक्ता संरक्षण अधिनियम/अन्य), प्रार्थित राहत, और संलग्नक सूची शामिल करें।\n- जहाँ उपयोगकर्ता विवरण खाली हैं, निकाले गए विवरणों का उपयोग करें।\n- स्पष्ट, सादी भाषा में लिखें और भेजने हेतु तैयार प्रारूप दें (ईमेल/डाक)।`
-      : `${baseContext}\n\nTemplate: ${templatePrompts[selectedTemplate]}\n\nUser-provided details: ${JSON.stringify(details)}\n\nExtracted evidence details: ${JSON.stringify(extracted || {})}\n\nInstructions:\n- Include formal header, subject, addressee, facts, legal basis (IRDAI rules/Consumer Protection Act/others), reliefs sought, and list of enclosures.\n- Where user fields are missing, use extracted values.\n- Write clearly in plain language and output a ready-to-send format (email/post).`;
+      ? `${baseContext}\n\nटेम्पलेट: ${templatePrompts[selectedTemplate]}\n\nउपयोगकर्ता विवरण: ${JSON.stringify(details)}\n\nनिकाले गए विवरण: ${JSON.stringify(extracted || {})}\n\nकृपया निम्नलिखित JSON संरचना में उत्तर दें:\n\n{\n  "document": "पूरा दस्तावेज़ पाठ (औपचारिक हेडर, विषय, संबोधन, तथ्य, कानूनी आधार, प्रार्थित राहत, संलग्नक सूची के साथ)",\n  "explanation": {\n    "citations": [{"type": "legal", "title": "कानून/नियम का नाम", "section": "धारा संख्या", "authority": "प्राधिकरण", "url": "वैकल्पिक लिंक"}],\n    "explanation": {\n      "english": "Why this template and legal basis applies",\n      "hindi": "यह टेम्पलेट और कानूनी आधार क्यों लागू है"\n    },\n    "actionSteps": {\n      "english": ["Send to relevant authority", "Keep copies", "Follow up"],\n      "hindi": ["संबंधित प्राधिकरण को भेजें", "प्रतियां रखें", "अनुवर्तन करें"]\n    },\n    "confidenceScore": 0.0-1.0,\n    "riskLevel": "low|medium|high"\n  }\n}\n\nकेवल JSON लौटाएं।`
+      : `${baseContext}\n\nTemplate: ${templatePrompts[selectedTemplate]}\n\nUser-provided details: ${JSON.stringify(details)}\n\nExtracted evidence details: ${JSON.stringify(extracted || {})}\n\nPlease respond in the following JSON structure:\n\n{\n  "document": "Complete document text (with formal header, subject, addressee, facts, legal basis, reliefs sought, list of enclosures)",\n  "explanation": {\n    "citations": [{"type": "legal", "title": "Law/Act name", "section": "section number", "authority": "issuing authority", "url": "optional link"}],\n    "explanation": {\n      "english": "Why this template and legal basis applies",\n      "hindi": "यह टेम्पलेट और कानूनी आधार क्यों लागू है"\n    },\n    "actionSteps": {\n      "english": ["Send to relevant authority", "Keep copies", "Follow up"],\n      "hindi": ["संबंधित प्राधिकरण को भेजें", "प्रतियां रखें", "अनुवर्तन करें"]\n    },\n    "confidenceScore": 0.0-1.0,\n    "riskLevel": "low|medium|high"\n  }\n}\n\nReturn ONLY JSON.`;
 
     const genRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -157,9 +157,32 @@ serve(async (req) => {
       throw new Error(data.error?.message || 'Failed to generate document');
     }
 
-    const document = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate document.';
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    
+    // Try to parse structured response
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(responseText);
+    } catch {
+      // Fallback for non-JSON responses
+      parsedResponse = {
+        document: responseText || 'Failed to generate document.',
+        explanation: {
+          citations: [{ type: 'legal', title: 'General Legal Framework', section: 'Various', authority: 'Legal System' }],
+          explanation: { english: 'Document generated based on standard legal templates.', hindi: 'मानक कानूनी टेम्प्लेट के आधार पर दस्तावेज़ तैयार किया गया।' },
+          actionSteps: { english: ['Review document', 'Send to appropriate authority'], hindi: ['दस्तावेज़ की समीक्षा करें', 'उपयुक्त प्राधिकरण को भेजें'] },
+          confidenceScore: 0.7,
+          riskLevel: 'medium'
+        }
+      };
+    }
 
-    return new Response(JSON.stringify({ document, selectedTemplate, extracted }), {
+    return new Response(JSON.stringify({ 
+      document: parsedResponse.document, 
+      selectedTemplate, 
+      extracted,
+      explanation: parsedResponse.explanation
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {

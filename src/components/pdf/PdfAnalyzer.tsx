@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { FileText, Upload, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ClauseResults, ClauseAnalysisResult } from '@/components/pdf/ClauseResults';
+import { ExplainabilityCard, ExplanationData } from '@/components/ai/ExplainabilityCard';
 import { supabase } from '@/integrations/supabase/client';
 interface PdfAnalyzerProps {
   language: 'en' | 'hi';
@@ -16,6 +17,7 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [question, setQuestion] = useState('');
   const [result, setResult] = useState<ClauseAnalysisResult | null>(null);
+  const [explanation, setExplanation] = useState<ExplanationData | null>(null);
   const [raw, setRaw] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
@@ -25,6 +27,7 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
     if (file && file.type === 'application/pdf') {
       setSelectedFile(file);
       setResult(null);
+      setExplanation(null);
       setRaw('');
     } else {
       toast({
@@ -76,12 +79,14 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
       }
 
       const hasResult = !!data?.result;
+      const hasExplanation = !!data?.explanation;
       const hasRaw = !!data?.raw;
       if (!hasResult && !hasRaw) {
         console.error('No structured result or raw text in response:', data);
         throw new Error('No analysis received');
       }
       setResult(hasResult ? data.result : null);
+      setExplanation(hasExplanation ? data.explanation : null);
       setRaw(hasRaw ? data.raw : '');
       toast({
         title: language === 'hi' ? 'सफलता' : 'Success',
@@ -194,7 +199,16 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
       </Card>
 
       {result && (
-        <ClauseResults result={result} language={language} />
+        <>
+          <ClauseResults result={result} language={language} />
+          {explanation && (
+            <ExplainabilityCard 
+              data={explanation} 
+              language={language}
+              title={language === 'hi' ? 'AI विश्लेषण स्पष्टीकरण' : 'AI Analysis Explanation'}
+            />
+          )}
+        </>
       )}
 
       {!result && raw && (
