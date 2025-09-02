@@ -26,6 +26,7 @@ export function DocumentGenerator({ language }: DocumentGeneratorProps) {
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [generatedDocument, setGeneratedDocument] = useState('');
   const [explanation, setExplanation] = useState<ExplanationData | null>(null);
+  const [extractedData, setExtractedData] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -96,6 +97,7 @@ const documentTypes = {
       if (data?.document) {
         setGeneratedDocument(data.document);
         setExplanation(data?.explanation || null);
+        setExtractedData(data?.extracted || null);
         // If backend extracted details, auto-fill missing fields for convenience
         if (data?.extracted) {
           setDetails((prev) => ({
@@ -109,8 +111,8 @@ const documentTypes = {
           title: language === 'hi' ? 'सफलता' : 'Success',
           description:
             language === 'hi'
-              ? 'दस्तावेज़ तैयार हो गया' + (data?.selectedTemplate ? ` • ${data.selectedTemplate}` : '')
-              : 'Document generated successfully' + (data?.selectedTemplate ? ` • ${data.selectedTemplate}` : ''),
+              ? `दस्तावेज़ तैयार हो गया${data?.selectedTemplate ? ` • ${data.selectedTemplate}` : ''}${data?.extracted?.hospital_name ? ` • ${data.extracted.hospital_name}` : ''}${data?.extracted?.doctor_name ? ` • डॉ. ${data.extracted.doctor_name}` : ''}`
+              : `Document generated successfully${data?.selectedTemplate ? ` • ${data.selectedTemplate}` : ''}${data?.extracted?.hospital_name ? ` • ${data.extracted.hospital_name}` : ''}${data?.extracted?.doctor_name ? ` • Dr. ${data.extracted.doctor_name}` : ''}`,
         });
       } else {
         throw new Error('Failed to generate document');
@@ -288,6 +290,59 @@ const documentTypes = {
             <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
               {generatedDocument}
             </div>
+            
+            {/* Show extracted metadata if available */}
+            {extractedData && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    {language === 'hi' ? 'निकाले गए विवरण' : 'Extracted Details'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    {extractedData?.hospital_name && (
+                      <div>
+                        <span className="font-medium">{language === 'hi' ? 'अस्पताल:' : 'Hospital:'}</span>
+                        <p>{extractedData.hospital_name}</p>
+                      </div>
+                    )}
+                    {extractedData?.doctor_name && (
+                      <div>
+                        <span className="font-medium">{language === 'hi' ? 'डॉक्टर:' : 'Doctor:'}</span>
+                        <p>Dr. {extractedData.doctor_name}</p>
+                        {extractedData.doctor_id && <p className="text-xs text-muted-foreground">ID: {extractedData.doctor_id}</p>}
+                      </div>
+                    )}
+                    {extractedData?.total_amount && (
+                      <div>
+                        <span className="font-medium">{language === 'hi' ? 'कुल राशि:' : 'Total Amount:'}</span>
+                        <p>{extractedData.total_amount}</p>
+                      </div>
+                    )}
+                    {extractedData?.bill_date && (
+                      <div>
+                        <span className="font-medium">{language === 'hi' ? 'बिल दिनांक:' : 'Bill Date:'}</span>
+                        <p>{extractedData.bill_date}</p>
+                      </div>
+                    )}
+                    {extractedData?.diagnosis && (
+                      <div>
+                        <span className="font-medium">{language === 'hi' ? 'निदान:' : 'Diagnosis:'}</span>
+                        <p>{extractedData.diagnosis}</p>
+                      </div>
+                    )}
+                    {extractedData?.policy_number && (
+                      <div>
+                        <span className="font-medium">{language === 'hi' ? 'पॉलिसी संख्या:' : 'Policy Number:'}</span>
+                        <p>{extractedData.policy_number}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             {explanation && (
               <ExplainabilityCard 
                 data={explanation} 
