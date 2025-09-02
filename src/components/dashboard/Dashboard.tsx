@@ -8,6 +8,7 @@ import { PdfAnalyzer } from "../pdf/PdfAnalyzer";
 import { LegalArticles } from "../legal/LegalArticles";
 import { MedicalGuidance } from "../medical/MedicalGuidance";
 import { LegalAssistance } from "../legal/LegalAssistance";
+import { RiskPrediction } from "../prediction/RiskPrediction";
 import { 
   MessageSquare, 
   FileText, 
@@ -16,7 +17,8 @@ import {
   Scale, 
   FileSearch,
   Users,
-  Stethoscope
+  Stethoscope,
+  TrendingUp
 } from "lucide-react";
 
 export function Dashboard() {
@@ -87,6 +89,16 @@ export function Dashboard() {
       icon: FileSearch,
       buttonText: language === 'hi' ? 'कानूनी सहायता' : 'Legal Help',
       variant: 'accent' as const
+    },
+    {
+      id: 'risk-prediction',
+      title: language === 'hi' ? 'जोखिम भविष्यवाणी' : 'Risk Prediction',
+      description: language === 'hi'
+        ? 'भविष्य के दावा अस्वीकरण और अधिकारों के उल्लंघन की भविष्यवाणी'
+        : 'Predict future claim rejections and rights violations',
+      icon: TrendingUp,
+      buttonText: language === 'hi' ? 'जोखिम विश्लेषण' : 'Analyze Risks',
+      variant: 'primary' as const
     }
   ];
 
@@ -130,6 +142,12 @@ export function Dashboard() {
         return (
           <div className="max-w-4xl mx-auto">
             <LegalAssistance language={language} />
+          </div>
+        );
+      case 'risk-prediction':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <RiskPrediction language={language} />
           </div>
         );
       default:
