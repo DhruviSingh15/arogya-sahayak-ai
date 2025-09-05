@@ -596,7 +596,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      search_document_chunks: {
+        Args: {
+          match_count?: number
+          query_embedding: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          chunk_index: number
+          content: string
+          created_at: string
+          document_id: string
+          documents: Json
+          id: string
+          similarity: number
+          tokens: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
