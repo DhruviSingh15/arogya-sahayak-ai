@@ -9,6 +9,7 @@ import { LegalArticles } from "../legal/LegalArticles";
 import { MedicalGuidance } from "../medical/MedicalGuidance";
 import { LegalAssistance } from "../legal/LegalAssistance";
 import { RiskPrediction } from "../prediction/RiskPrediction";
+import { CorpusSearch } from "../corpus/CorpusSearch";
 import { 
   MessageSquare, 
   FileText, 
@@ -18,7 +19,8 @@ import {
   FileSearch,
   Users,
   Stethoscope,
-  TrendingUp
+  TrendingUp,
+  Database
 } from "lucide-react";
 
 export function Dashboard() {
@@ -99,6 +101,16 @@ export function Dashboard() {
       icon: TrendingUp,
       buttonText: language === 'hi' ? 'जोखिम विश्लेषण' : 'Analyze Risks',
       variant: 'primary' as const
+    },
+    {
+      id: 'corpus-search',
+      title: language === 'hi' ? 'दस्तावेज़ खोज' : 'Document Search',
+      description: language === 'hi'
+        ? 'कानूनी और चिकित्सा दस्तावेजों में उन्नत खोज'
+        : 'Advanced search through legal and medical documents',
+      icon: Database,
+      buttonText: language === 'hi' ? 'खोजें' : 'Search',
+      variant: 'accent' as const
     }
   ];
 
@@ -148,6 +160,12 @@ export function Dashboard() {
         return (
           <div className="max-w-4xl mx-auto">
             <RiskPrediction language={language} />
+          </div>
+        );
+      case 'corpus-search':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <CorpusSearch language={language} />
           </div>
         );
       default:
