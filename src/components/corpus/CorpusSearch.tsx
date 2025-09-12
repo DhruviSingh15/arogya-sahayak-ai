@@ -26,7 +26,7 @@ export function CorpusSearch({ language }: CorpusSearchProps) {
   const handleFilterChange = (key: keyof CorpusSearchFilters, value: string) => {
     setFilters(prev => ({
       ...prev,
-      [key]: value || undefined
+      [key]: value === 'all' ? undefined : value
     }));
   };
 
@@ -94,12 +94,12 @@ export function CorpusSearch({ language }: CorpusSearchProps) {
               </span>
             </div>
             
-            <Select value={filters.doc_type || ''} onValueChange={(value) => handleFilterChange('doc_type', value)}>
+            <Select value={filters.doc_type || 'all'} onValueChange={(value) => handleFilterChange('doc_type', value)}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder={language === 'hi' ? 'दस्तावेज़ प्रकार' : 'Document Type'} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">
+                <SelectItem value="all">
                   {language === 'hi' ? 'सभी प्रकार' : 'All Types'}
                 </SelectItem>
                 <SelectItem value="legal">
@@ -114,12 +114,12 @@ export function CorpusSearch({ language }: CorpusSearchProps) {
               </SelectContent>
             </Select>
 
-            <Select value={filters.category || ''} onValueChange={(value) => handleFilterChange('category', value)}>
+            <Select value={filters.category || 'all'} onValueChange={(value) => handleFilterChange('category', value)}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder={language === 'hi' ? 'श्रेणी' : 'Category'} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">
+                <SelectItem value="all">
                   {language === 'hi' ? 'सभी श्रेणी' : 'All Categories'}
                 </SelectItem>
                 <SelectItem value="healthcare">
