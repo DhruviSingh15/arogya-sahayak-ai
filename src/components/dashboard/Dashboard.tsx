@@ -10,6 +10,7 @@ import { MedicalGuidance } from "../medical/MedicalGuidance";
 import { LegalAssistance } from "../legal/LegalAssistance";
 import { RiskPrediction } from "../prediction/RiskPrediction";
 import { CorpusSearch } from "../corpus/CorpusSearch";
+import { AdminPanel } from "../admin/AdminPanel";
 import { 
   MessageSquare, 
   FileText, 
@@ -20,7 +21,8 @@ import {
   Users,
   Stethoscope,
   TrendingUp,
-  Database
+  Database,
+  Settings
 } from "lucide-react";
 
 export function Dashboard() {
@@ -111,6 +113,16 @@ export function Dashboard() {
       icon: Database,
       buttonText: language === 'hi' ? 'खोजें' : 'Search',
       variant: 'accent' as const
+    },
+    {
+      id: 'admin',
+      title: language === 'hi' ? 'व्यवस्थापक पैनल' : 'Admin Panel',
+      description: language === 'hi'
+        ? 'दस्तावेज़ और सिस्टम सेटिंग्स प्रबंधित करें'
+        : 'Manage documents and system settings',
+      icon: Settings,
+      buttonText: language === 'hi' ? 'व्यवस्थापक खोलें' : 'Open Admin',
+      variant: 'secondary' as const
     }
   ];
 
@@ -166,6 +178,12 @@ export function Dashboard() {
         return (
           <div className="max-w-4xl mx-auto">
             <CorpusSearch language={language} />
+          </div>
+        );
+      case 'admin':
+        return (
+          <div className="max-w-4xl mx-auto">
+            <AdminPanel language={language} />
           </div>
         );
       default:
