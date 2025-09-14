@@ -319,12 +319,12 @@ export function AdminPanel({ language }: AdminPanelProps) {
                     <Label htmlFor="url_category">
                       {isEnglish ? 'Category (Optional)' : 'श्रेणी (वैकल्पिक)'}
                     </Label>
-                    <Select value={urlCategory} onValueChange={setUrlCategory}>
+                    <Select value={urlCategory} onValueChange={(value) => setUrlCategory(value === 'none' ? '' : value)}>
                       <SelectTrigger>
                         <SelectValue placeholder={isEnglish ? 'Select category...' : 'श्रेणी चुनें...'} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">
+                        <SelectItem value="none">
                           {isEnglish ? 'No Category' : 'कोई श्रेणी नहीं'}
                         </SelectItem>
                         {CATEGORIES.map(category => (
