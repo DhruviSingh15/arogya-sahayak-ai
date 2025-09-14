@@ -30,7 +30,7 @@ export function useDocumentIngestion() {
       const { data, error: ingestionError } = await supabase.functions.invoke('corpus-ingestion', {
         body: {
           action: 'ingest_document',
-          document: {
+          data: {
             ...document,
             tags: document.tags || []
           }
@@ -70,9 +70,11 @@ export function useDocumentIngestion() {
       const { data, error: ingestionError } = await supabase.functions.invoke('corpus-ingestion', {
         body: {
           action: 'ingest_from_url',
-          url,
-          doc_type,
-          category
+          data: {
+            url,
+            doc_type,
+            category
+          }
         }
       });
 

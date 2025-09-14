@@ -25,6 +25,8 @@ serve(async (req) => {
     switch (action) {
       case 'ingest_document':
         return await ingestDocument(data);
+      case 'ingest_from_url':
+        return await ingestFromUrl(data);
       case 'scrape_india_code':
         return await scrapeIndiaCode(data);
       case 'fetch_nha_documents':
@@ -164,6 +166,69 @@ function chunkText(text: string, maxTokens: number): string[] {
 function estimateTokens(text: string): number {
   // Rough estimation: ~4 characters per token
   return Math.ceil(text.length / 4);
+}
+
+async function ingestFromUrl(data: any) {
+  const { url, doc_type = 'general', category, language = 'en' } = data || {};
+  if (!url) {
+    return new Response(JSON.stringify({ error: 'URL is required' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; CorpusIngestionBot/1.0; +https://supabase.com)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch URL (status ${res.status})`);
+    }
+
+    const html = await res.text();
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\\/title>/i);
+    const title = (titleMatch ? titleMatch[1] : url).trim().slice(0, 200);
+
+    // Remove scripts, styles, and comments
+    const cleaned = html
+      .replace(/<script[\s\S]*?<\\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\\/style>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '');
+
+    // Add line breaks for common block elements, then strip tags
+    const withBreaks = cleaned
+      .replace(/<\/?(p|div|section|article|li|ul|ol|h[1-6]|br)[^>]*>/gi, '\n');
+
+    const text = withBreaks
+      .replace(/<[^>]+>/g, '')
+      .replace(/[\t\r ]+/g, ' ')
+      .replace(/\n{2,}/g, '\n')
+      .trim();
+
+    if (!text || text.length < 50) {
+      throw new Error('Extracted content is too short to ingest');
+    }
+
+    return await ingestDocument({
+      title,
+      content: text,
+      doc_type,
+      source_url: url,
+      category,
+      tags: [],
+      language,
+    });
+  } catch (error) {
+    console.error('Error ingesting from URL:', error);
+    return new Response(JSON.stringify({ error: error.message || 'Failed to ingest URL' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 async function scrapeIndiaCode(data: any) {
