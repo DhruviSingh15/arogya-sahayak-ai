@@ -15,6 +15,7 @@ export default function Auth() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [activeTab, setActiveTab] = useState('signin');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -47,11 +48,19 @@ export default function Auth() {
       });
 
       if (error) {
-        toast({
-          title: "Sign In Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Sign In Failed",
+            description: "Invalid email or password. Please check your credentials and try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Sign In Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Welcome back!",
@@ -86,16 +95,30 @@ export default function Auth() {
       });
 
       if (error) {
-        toast({
-          title: "Sign Up Error", 
-          description: error.message,
-          variant: "destructive",
-        });
+        if (error.message.includes('User already registered')) {
+          // Switch to sign-in tab and show helpful message
+          setActiveTab('signin');
+          toast({
+            title: "Account Already Exists",
+            description: "This email is already registered. Please sign in instead.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Sign Up Error", 
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
-          title: "Account Created!",
-          description: "Please check your email to verify your account.",
+          title: "Account Created Successfully!",
+          description: "You can now sign in with your credentials.",
         });
+        // Auto-switch to sign-in tab after successful signup
+        setActiveTab('signin');
+        // Clear the full name field since it's not needed for sign-in
+        setFullName('');
       }
     } catch (error) {
       toast({
@@ -126,7 +149,7 @@ export default function Auth() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -198,10 +221,11 @@ export default function Auth() {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="Create a password (min 6 characters)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={6}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
