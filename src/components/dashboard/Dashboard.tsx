@@ -30,7 +30,7 @@ import {
 export function Dashboard() {
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
-  const { user, loading, signOut } = useAuth();
+  const { user, loading = true, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
