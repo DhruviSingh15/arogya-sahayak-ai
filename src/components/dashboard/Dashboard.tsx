@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 import { Header } from "./Header";
+import { useAuth } from '@/hooks/useAuth';
 import { EmergencySection } from "./EmergencySection";
 import { FeatureCard } from "./FeatureCard";
 import { ChatInterface } from "../chat/ChatInterface";
@@ -28,6 +30,14 @@ import {
 export function Dashboard() {
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
 
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'hi' : 'en');
@@ -265,7 +275,12 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      <Header onLanguageToggle={toggleLanguage} language={language} />
+      <Header 
+        onLanguageToggle={toggleLanguage} 
+        language={language}
+        user={user}
+        onSignOut={signOut}
+      />
       
       <main className="container mx-auto px-4 py-8">
         {activeSection !== 'dashboard' && (
