@@ -37,12 +37,10 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'text/plain': ['.txt'],
       'text/markdown': ['.md'],
       'application/json': ['.json'],
+      'text/html': ['.html'],
     },
     maxSize: 20 * 1024 * 1024, // 20MB
   });
@@ -65,12 +63,13 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
       ));
 
       // Prepare document data
-      const docData: DocumentIngestionRequest = {
+      const docData: DocumentIngestionRequest & { file_type?: string } = {
         title: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
         content,
         doc_type: detectDocType(file.name),
         language,
         tags: [file.type, 'uploaded'],
+        file_type: file.type,
       };
 
       // Ingest document
@@ -106,8 +105,8 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
-        if (content.length < 100) {
-          reject(new Error('File content is too short'));
+        if (!content || content.trim().length < 50) {
+          reject(new Error('File content is too short (minimum 50 characters)'));
         } else {
           resolve(content);
         }
@@ -148,7 +147,7 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
         <CardHeader>
           <CardTitle>Upload Documents</CardTitle>
           <CardDescription>
-            Upload PDF, DOC, DOCX, TXT, MD, or JSON files (max 20MB each)
+            Upload TXT, MD, JSON, or HTML files (max 20MB each)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,7 +167,7 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
               <div>
                 <p className="text-lg mb-2">Drag & drop files here, or click to select</p>
                 <p className="text-sm text-muted-foreground">
-                  Supported: PDF, DOC, DOCX, TXT, MD, JSON
+                  Supported: TXT, MD, JSON, HTML
                 </p>
               </div>
             )}

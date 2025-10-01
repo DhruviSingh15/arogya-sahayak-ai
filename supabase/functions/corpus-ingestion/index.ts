@@ -46,11 +46,40 @@ serve(async (req) => {
 });
 
 async function ingestDocument(data: any) {
-  const { title, content, doc_type, source_url, category, tags, language = 'en' } = data;
+  const { title, content, doc_type, source_url, category, tags, language = 'en', file_type } = data;
+  
+  let textContent = content;
+  
+  // Handle base64 encoded binary files (PDFs, DOCX)
+  if (content.startsWith('data:')) {
+    const base64Data = content.split(',')[1];
+    if (!base64Data) {
+      throw new Error('Invalid base64 data');
+    }
+    
+    // For now, we'll extract text from base64 encoded files
+    // In a production environment, you'd use specialized libraries for PDF/DOCX parsing
+    if (content.includes('application/pdf')) {
+      throw new Error('PDF text extraction not yet implemented. Please use text files (.txt, .md) for now.');
+    } else if (content.includes('wordprocessingml') || content.includes('msword')) {
+      throw new Error('Word document text extraction not yet implemented. Please use text files (.txt, .md) for now.');
+    }
+    
+    // For other base64 files, try to decode as text
+    try {
+      textContent = atob(base64Data);
+    } catch (e) {
+      throw new Error('Failed to decode file content');
+    }
+  }
+  
+  if (!textContent || textContent.length < 50) {
+    throw new Error('Content is too short (minimum 50 characters)');
+  }
   
   // Create checksum for deduplication
   const encoder = new TextEncoder();
-  const contentBytes = encoder.encode(content);
+  const contentBytes = encoder.encode(textContent);
   const hashBuffer = await crypto.subtle.digest('SHA-256', contentBytes);
   const checksum = Array.from(new Uint8Array(hashBuffer))
     .map(b => b.toString(16).padStart(2, '0'))
@@ -77,7 +106,7 @@ async function ingestDocument(data: any) {
     .from('documents')
     .insert({
       title,
-      content_text: content,
+      content_text: textContent,
       doc_type,
       source_url,
       category,
@@ -91,7 +120,7 @@ async function ingestDocument(data: any) {
   if (docError) throw docError;
 
   // Generate embeddings and chunks
-  await generateEmbeddings(document.id, content);
+  await generateEmbeddings(document.id, textContent);
 
   return new Response(JSON.stringify({ 
     message: 'Document ingested successfully',
