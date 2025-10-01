@@ -219,7 +219,7 @@ async function ingestFromUrl(data: any) {
     }
 
     const html = await res.text();
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\\/title>/i);
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     const title = (titleMatch ? titleMatch[1] : url).trim().slice(0, 200);
 
     // Remove scripts, styles, and comments
