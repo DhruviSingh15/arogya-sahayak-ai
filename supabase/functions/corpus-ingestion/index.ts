@@ -224,8 +224,8 @@ async function ingestFromUrl(data: any) {
 
     // Remove scripts, styles, and comments
     const cleaned = html
-      .replace(/<script[\s\S]*?<\\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\\/style>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
       .replace(/<!--[\s\S]*?-->/g, '');
 
     // Add line breaks for common block elements, then strip tags
