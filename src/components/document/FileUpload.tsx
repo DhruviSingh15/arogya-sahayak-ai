@@ -41,6 +41,10 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
       'text/markdown': ['.md'],
       'application/json': ['.json'],
       'text/html': ['.html'],
+      'application/pdf': ['.pdf'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
     },
     maxSize: 20 * 1024 * 1024, // 20MB
   });
@@ -104,15 +108,28 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const content = e.target?.result as string;
-        if (!content || content.trim().length < 50) {
-          reject(new Error('File content is too short (minimum 50 characters)'));
+        const result = e.target?.result as string;
+        
+        // For text files, validate content length
+        if (file.type.startsWith('text/') || file.type === 'application/json') {
+          if (!result || result.trim().length < 50) {
+            reject(new Error('File content is too short (minimum 50 characters)'));
+          } else {
+            resolve(result);
+          }
         } else {
-          resolve(content);
+          // For binary files (PDF, images), return base64
+          resolve(result);
         }
       };
       reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsText(file);
+      
+      // Read as text for text files, as data URL for binary files
+      if (file.type.startsWith('text/') || file.type === 'application/json') {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
     });
   };
 
@@ -147,7 +164,7 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
         <CardHeader>
           <CardTitle>Upload Documents</CardTitle>
           <CardDescription>
-            Upload TXT, MD, JSON, or HTML files (max 20MB each)
+            Upload TXT, MD, JSON, HTML, PDF, or image files (max 20MB each)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -167,7 +184,7 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
               <div>
                 <p className="text-lg mb-2">Drag & drop files here, or click to select</p>
                 <p className="text-sm text-muted-foreground">
-                  Supported: TXT, MD, JSON, HTML
+                  Supported: TXT, MD, JSON, HTML, PDF, JPG, PNG, WEBP
                 </p>
               </div>
             )}
