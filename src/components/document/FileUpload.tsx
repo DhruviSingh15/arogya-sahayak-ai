@@ -88,12 +88,17 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
             result 
           } : f
         ));
+        toast({
+          title: "Upload Successful",
+          description: `${file.name} has been added to the corpus`,
+        });
         onUploadComplete?.(result);
       } else {
         throw new Error('Ingestion failed');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      console.error('File upload error:', error);
       setFiles(prev => prev.map((f, i) => 
         i === index ? { 
           ...f, 
@@ -101,6 +106,11 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
           error: errorMessage 
         } : f
       ));
+      toast({
+        title: "Upload Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 

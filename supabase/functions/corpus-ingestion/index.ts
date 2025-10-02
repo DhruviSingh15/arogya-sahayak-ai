@@ -161,7 +161,19 @@ async function generateEmbeddings(documentId: string, content: string) {
       }),
     });
 
+    if (!embeddingResponse.ok) {
+      const errorText = await embeddingResponse.text();
+      console.error(`OpenAI API error (status ${embeddingResponse.status}):`, errorText);
+      throw new Error(`Failed to generate embeddings: ${embeddingResponse.status} - ${errorText}`);
+    }
+
     const embeddingData = await embeddingResponse.json();
+    
+    if (!embeddingData.data || !embeddingData.data[0] || !embeddingData.data[0].embedding) {
+      console.error('Invalid embedding response:', JSON.stringify(embeddingData));
+      throw new Error('Invalid response from embedding API');
+    }
+    
     const embedding = embeddingData.data[0].embedding;
 
     // Store chunk with embedding
