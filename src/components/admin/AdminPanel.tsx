@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useDocumentIngestion, DocumentIngestionRequest } from '@/hooks/useDocumentIngestion';
 import { Plus, Upload, Link, Database, X } from 'lucide-react';
+import { FileUpload } from '../document/FileUpload';
 
 interface Language {
   code: 'en' | 'hi';
@@ -347,18 +348,12 @@ export function AdminPanel({ language }: AdminPanelProps) {
             </TabsContent>
 
             <TabsContent value="upload" className="space-y-4 mt-6">
-              <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">
-                  {isEnglish ? 'File Upload Coming Soon' : 'फ़ाइल अपलोड जल्द आ रहा है'}
-                </p>
-                <p className="text-muted-foreground">
-                  {isEnglish 
-                    ? 'Support for PDF, DOCX, and TXT files will be added soon.'
-                    : 'PDF, DOCX, और TXT फ़ाइलों का समर्थन जल्द ही जोड़ा जाएगा।'
-                  }
-                </p>
-              </div>
+              <FileUpload 
+                language={language}
+                onUploadComplete={(result) => {
+                  console.log('Document uploaded successfully:', result);
+                }}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>
