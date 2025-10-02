@@ -58,6 +58,8 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
     throw new Error('OpenAI API key not found');
   }
 
+  console.log('Generating query embedding...');
+
   const response = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: {
@@ -70,7 +72,20 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
     }),
   });
 
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`OpenAI embedding error (${response.status}):`, errorText);
+    throw new Error(`Failed to generate embedding: ${response.status}`);
+  }
+
   const data = await response.json();
+  
+  if (!data.data || !data.data[0] || !data.data[0].embedding) {
+    console.error('Invalid embedding response:', JSON.stringify(data));
+    throw new Error('Invalid embedding response from OpenAI');
+  }
+
+  console.log('Query embedding generated successfully');
   return data.data[0].embedding;
 }
 
@@ -81,86 +96,87 @@ async function performSemanticSearch(
   threshold: number
 ): Promise<any[]> {
   
-  // Build filter conditions
-  let query = supabase
-    .from('document_chunks')
-    .select(`
-      *,
-      documents:document_id (
+  console.log('Performing semantic search...');
+
+  try {
+    // Use pgvector similarity search with RPC
+    const { data, error } = await supabase.rpc('search_document_chunks', {
+      query_embedding: queryEmbedding,
+      similarity_threshold: threshold,
+      match_count: limit
+    });
+
+    if (error) {
+      console.error('Semantic search RPC error:', error);
+      return [];
+    }
+
+    const results = data || [];
+    console.log(`Semantic search found ${results.length} results`);
+    
+    return results.map((item: any) => ({
+      ...item,
+      search_type: 'semantic'
+    }));
+  } catch (error) {
+    console.error('Semantic search exception:', error);
+    return [];
+  }
+}
+
+async function performKeywordSearch(query: string, filters: any, limit: number): Promise<any[]> {
+  console.log('Performing keyword search...');
+  
+  try {
+    let searchQuery = supabase
+      .from('documents')
+      .select(`
         id,
         title,
+        content_text,
         doc_type,
         category,
         tags,
         language,
         published_at,
         source_url
-      )
-    `);
+      `)
+      .textSearch('content_text', query, { type: 'websearch' })
+      .eq('status', 'active');
 
-  // Apply filters
-  if (filters.doc_type) {
-    query = query.eq('documents.doc_type', filters.doc_type);
-  }
-  if (filters.category) {
-    query = query.eq('documents.category', filters.category);
-  }
-  if (filters.language) {
-    query = query.eq('documents.language', filters.language);
-  }
+    // Apply filters
+    if (filters.doc_type) {
+      searchQuery = searchQuery.eq('doc_type', filters.doc_type);
+    }
+    if (filters.category) {
+      searchQuery = searchQuery.eq('category', filters.category);
+    }
+    if (filters.language) {
+      searchQuery = searchQuery.eq('language', filters.language);
+    }
 
-  // Use pgvector similarity search with RPC
-  const { data, error } = await supabase.rpc('search_document_chunks', {
-    query_embedding: queryEmbedding,
-    similarity_threshold: threshold,
-    match_count: limit
-  });
+    const { data, error } = await searchQuery.limit(limit);
 
-  if (error) {
-    console.error('Semantic search error:', error);
+    if (error) {
+      console.error('Keyword search error:', error);
+      return [];
+    }
+
+    const results = data || [];
+    console.log(`Keyword search found ${results.length} results`);
+    
+    return results.map((doc: any) => ({
+      id: doc.id,
+      document_id: doc.id,
+      chunk_index: 0,
+      content: doc.content_text?.substring(0, 500) || '',
+      documents: doc,
+      search_type: 'keyword'
+    }));
+  } catch (error) {
+    console.error('Keyword search exception:', error);
     return [];
   }
-
-  return data || [];
-}
-
-async function performKeywordSearch(query: string, filters: any, limit: number): Promise<any[]> {
-  let searchQuery = supabase
-    .from('documents')
-    .select(`
-      id,
-      title,
-      content_text,
-      doc_type,
-      category,
-      tags,
-      language,
-      published_at,
-      source_url
-    `)
-    .textSearch('content_text', query, { type: 'websearch' });
-
-  // Apply filters
-  if (filters.doc_type) {
-    searchQuery = searchQuery.eq('doc_type', filters.doc_type);
-  }
-  if (filters.category) {
-    searchQuery = searchQuery.eq('category', filters.category);
-  }
-  if (filters.language) {
-    searchQuery = searchQuery.eq('language', filters.language);
-  }
-
-  const { data, error } = await searchQuery
-    .eq('status', 'active')
-    .limit(limit);
-
-  if (error) {
-    console.error('Keyword search error:', error);
-    return [];
-  }
-
-  return data || [];
 }
 
 function mergeSearchResults(semanticResults: any[], keywordResults: any[], limit: number): any[] {
