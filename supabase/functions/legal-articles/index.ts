@@ -16,81 +16,83 @@ serve(async (req) => {
     
     console.log('Legal articles request:', { topic, language });
     
-    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 
-    if (!perplexityApiKey || !geminiApiKey) {
-      console.error('API keys not configured');
-      throw new Error('API keys not configured');
+    if (!geminiApiKey) {
+      console.error('GEMINI_API_KEY not configured');
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Enhanced prompt for better results
-    const searchPrompt = language === 'hi' 
-      ? `भारत में ${topic} के बारे में विस्तृत कानूनी जानकारी प्रदान करें। इसमें शामिल करें:
-         - संबंधित कानूनी धाराएं और अधिनियम
-         - नागरिकों के अधिकार
-         - उपलब्ध उपाय और प्रक्रियाएं
-         - सरकारी योजनाएं (जैसे आयुष्मान भारत)
-         - हालिया कानूनी विकास
-         कृपया व्यापक और उपयोगी जानकारी दें।`
-      : `Provide comprehensive legal information about ${topic} in India. Include:
-         - Relevant legal sections and acts
-         - Citizens' rights and entitlements
-         - Available remedies and procedures
-         - Government schemes (like Ayushman Bharat)
-         - Recent legal developments
-         Please provide detailed and actionable information.`;
+    // Comprehensive prompt for Gemini to provide legal information
+    const prompt = language === 'hi' 
+      ? `भारत में ${topic} के बारे में विस्तृत और व्यापक कानूनी जानकारी प्रदान करें। एक सुव्यवस्थित लेख बनाएं जिसमें शामिल हो:
 
-    console.log('Fetching from Perplexity API...');
+**${topic} - भारत में कानूनी जानकारी**
 
-    // Get legal information from Perplexity
-    const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
-        messages: [
-          {
-            role: 'system',
-            content: language === 'hi' 
-              ? 'आप भारतीय कानून और स्वास्थ्य अधिकारों के विशेषज्ञ हैं। विस्तृत, सटीक और उपयोगी जानकारी प्रदान करें।'
-              : 'You are an expert on Indian law and health rights. Provide detailed, accurate, and actionable information.'
-          },
-          {
-            role: 'user',
-            content: searchPrompt
-          }
-        ],
-        temperature: 0.2,
-        top_p: 0.9,
-        max_tokens: 2000,
-        search_recency_filter: 'month',
-      }),
-    });
+1. **परिचय और अवलोकन**
+   - ${topic} क्या है और यह क्यों महत्वपूर्ण है
 
-    if (!perplexityResponse.ok) {
-      const errorText = await perplexityResponse.text();
-      console.error(`Perplexity API error (${perplexityResponse.status}):`, errorText);
-      throw new Error(`Perplexity API failed: ${perplexityResponse.status}`);
-    }
+2. **संबंधित कानून और अधिनियम**
+   - प्रमुख कानूनी धाराएं और अधिनियम
+   - संवैधानिक प्रावधान
+   - हालिया संशोधन (2020-2025)
 
-    const perplexityData = await perplexityResponse.json();
-    console.log('Perplexity response received');
-    
-    const legalInfo = perplexityData.choices?.[0]?.message?.content;
-    
-    if (!legalInfo) {
-      console.error('No content in Perplexity response:', JSON.stringify(perplexityData));
-      throw new Error('No legal information found from search');
-    }
+3. **नागरिकों के अधिकार और पात्रता**
+   - मौलिक अधिकार
+   - कानूनी संरक्षण
+   - पात्रता मानदंड
 
-    console.log('Legal info length:', legalInfo.length);
-    console.log('Formatting with Gemini API...');
+4. **सरकारी योजनाएं और लाभ**
+   - आयुष्मान भारत योजना
+   - अन्य संबंधित सरकारी योजनाएं
+   - कैसे लाभ उठाएं
 
-    // Use Gemini to format and enhance the content
+5. **उपलब्ध उपाय और प्रक्रिया**
+   - शिकायत दर्ज करने की प्रक्रिया
+   - कानूनी उपाय
+   - सहायता केंद्र और हेल्पलाइन
+
+6. **हालिया विकास और केस स्टडी**
+   - महत्वपूर्ण न्यायिक निर्णय
+   - नीति परिवर्तन
+
+कृपया विस्तृत, व्यावहारिक और सटीक जानकारी दें। शीर्षक, उप-शीर्षक और बुलेट पॉइंट का उपयोग करें।`
+      : `Provide comprehensive and detailed legal information about ${topic} in India. Create a well-structured article that includes:
+
+**${topic} - Legal Information in India**
+
+1. **Introduction and Overview**
+   - What is ${topic} and why it matters
+
+2. **Relevant Laws and Acts**
+   - Key legal sections and acts
+   - Constitutional provisions
+   - Recent amendments (2020-2025)
+
+3. **Citizens' Rights and Eligibility**
+   - Fundamental rights
+   - Legal protections
+   - Eligibility criteria
+
+4. **Government Schemes and Benefits**
+   - Ayushman Bharat Scheme
+   - Other related government programs
+   - How to access benefits
+
+5. **Available Remedies and Procedures**
+   - Complaint filing process
+   - Legal remedies
+   - Support centers and helplines
+
+6. **Recent Developments and Case Studies**
+   - Important judicial decisions
+   - Policy changes
+
+Please provide detailed, actionable, and accurate information. Use headings, subheadings, and bullet points for clarity.`;
+
+    console.log('Fetching from Gemini API...');
+
+    // Get comprehensive legal information from Gemini
     const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
@@ -99,14 +101,12 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: language === 'hi' 
-              ? `निम्नलिखित कानूनी जानकारी को एक सुव्यवस्थित और पढ़ने योग्य लेख में प्रारूपित करें। शीर्षक, उप-शीर्षक और बुलेट पॉइंट का उपयोग करें:\n\n${legalInfo}`
-              : `Format the following legal information into a well-structured and readable article. Use headings, subheadings, and bullet points:\n\n${legalInfo}`
+            text: prompt
           }]
         }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 2500,
+          maxOutputTokens: 3000,
         }
       }),
     });
@@ -114,21 +114,15 @@ serve(async (req) => {
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
       console.error(`Gemini API error (${geminiResponse.status}):`, errorText);
-      // Fall back to raw Perplexity content if Gemini fails
-      console.log('Falling back to Perplexity content');
-      return new Response(JSON.stringify({ article: legalInfo }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error(`Gemini API failed: ${geminiResponse.status}`);
     }
 
     const geminiData = await geminiResponse.json();
     const article = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!article) {
-      console.error('No content in Gemini response, using Perplexity content');
-      return new Response(JSON.stringify({ article: legalInfo }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error('No content in Gemini response:', JSON.stringify(geminiData));
+      throw new Error('No legal information generated');
     }
 
     console.log('Successfully generated article, length:', article.length);
