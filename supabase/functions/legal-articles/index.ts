@@ -93,7 +93,7 @@ Please provide detailed, actionable, and accurate information. Use headings, sub
     console.log('Fetching from Gemini API...');
 
     // Get comprehensive legal information from Gemini
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
