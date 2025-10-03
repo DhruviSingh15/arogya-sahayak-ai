@@ -9,6 +9,7 @@ import { useCorpusSearch, CorpusSearchResult } from '@/hooks/useCorpusSearch';
 import { Search, FileText, Calendar, Tag, Globe } from 'lucide-react';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { FileUpload } from './FileUpload';
+import { DocumentList } from './DocumentList';
 
 interface DocumentManagerProps {
   language: 'en' | 'hi';
@@ -204,26 +205,7 @@ export function DocumentManager({ language }: DocumentManagerProps) {
 
         {/* Management Tab */}
         <TabsContent value="manage">
-          <Card>
-            <CardHeader>
-              <CardTitle>Document Management</CardTitle>
-              <CardDescription>
-                Advanced document management features (coming soon)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Advanced Management</h3>
-                <p className="text-muted-foreground mb-4">
-                  Features like document editing, deletion, and batch operations will be available soon.
-                </p>
-                <Button variant="outline" disabled>
-                  Coming Soon
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <DocumentList language={language} />
         </TabsContent>
       </Tabs>
     </div>

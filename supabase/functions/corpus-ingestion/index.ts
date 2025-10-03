@@ -61,11 +61,16 @@ async function ingestDocument(data: any) {
     if (content.includes('image/')) {
       textContent = `[Image File: ${title}]\nFile Type: ${file_type}\nThis is an image document stored in the corpus.\nOriginal filename: ${title}`;
     }
-    // Handle PDFs - attempt basic extraction
+    // Handle PDFs - extract text content
     else if (content.includes('application/pdf')) {
-      // For PDFs, we'll use a simple approach: store metadata
-      // Full PDF text extraction would require additional libraries
-      textContent = `[PDF Document: ${title}]\nFile Type: PDF\nThis PDF document has been uploaded to the corpus.\nFor full text extraction, please use the PDF analyzer feature.`;
+      console.log('Extracting text from PDF...');
+      try {
+        textContent = await extractPDFText(base64Data);
+        console.log(`Extracted ${textContent.length} characters from PDF`);
+      } catch (error) {
+        console.error('PDF extraction error:', error);
+        throw new Error(`Failed to extract text from PDF: ${error.message}`);
+      }
     } 
     // Handle Word documents
     else if (content.includes('wordprocessingml') || content.includes('msword')) {
@@ -215,6 +220,80 @@ function chunkText(text: string, maxTokens: number): string[] {
 function estimateTokens(text: string): number {
   // Rough estimation: ~4 characters per token
   return Math.ceil(text.length / 4);
+}
+
+async function extractPDFText(base64Data: string): Promise<string> {
+  try {
+    // Decode base64 to binary
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Convert to string and extract text between stream markers
+    const pdfText = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    
+    // Extract text from PDF structure
+    // PDFs store text in streams between 'stream' and 'endstream' keywords
+    const textMatches: string[] = [];
+    
+    // Method 1: Extract from stream objects
+    const streamRegex = /stream\s*([\s\S]*?)\s*endstream/g;
+    let match;
+    while ((match = streamRegex.exec(pdfText)) !== null) {
+      const streamContent = match[1];
+      // Try to extract readable text
+      const readableText = streamContent
+        .replace(/[^\x20-\x7E\n\r\t]/g, '') // Keep printable ASCII + newlines
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (readableText.length > 10) {
+        textMatches.push(readableText);
+      }
+    }
+    
+    // Method 2: Look for text objects (BT...ET blocks)
+    const textObjectRegex = /BT\s*([\s\S]*?)\s*ET/g;
+    while ((match = textObjectRegex.exec(pdfText)) !== null) {
+      const textBlock = match[1];
+      // Extract text from Tj and TJ operators
+      const tjRegex = /\((.*?)\)\s*Tj/g;
+      let tjMatch;
+      while ((tjMatch = tjRegex.exec(textBlock)) !== null) {
+        textMatches.push(tjMatch[1]);
+      }
+      
+      // Handle array text
+      const tjArrayRegex = /\[(.*?)\]\s*TJ/g;
+      let tjArrayMatch;
+      while ((tjArrayMatch = tjArrayRegex.exec(textBlock)) !== null) {
+        const arrayContent = tjArrayMatch[1].replace(/\((.*?)\)/g, '$1 ');
+        textMatches.push(arrayContent);
+      }
+    }
+    
+    // Combine all extracted text
+    let extractedText = textMatches.join(' ').trim();
+    
+    // Clean up the text
+    extractedText = extractedText
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    if (extractedText.length < 50) {
+      throw new Error('Could not extract sufficient text from PDF. The PDF might be image-based or encrypted.');
+    }
+    
+    return extractedText;
+  } catch (error) {
+    console.error('PDF text extraction error:', error);
+    throw new Error(`PDF extraction failed: ${error.message}`);
+  }
 }
 
 async function ingestFromUrl(data: any) {
