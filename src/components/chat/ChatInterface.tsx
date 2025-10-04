@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Mic, Bot, User } from "lucide-react";
+import { Send, Mic, Bot, User, Loader2 } from "lucide-react";
 import { ExplainabilityCard, ExplanationData } from '@/components/ai/ExplainabilityCard';
 import { supabase } from '@/integrations/supabase/client';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
 
 interface Message {
   id: string;
@@ -31,7 +32,7 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
   ]);
   
   const [inputText, setInputText] = useState('');
-  const [isListening, setIsListening] = useState(false);
+  const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
@@ -87,9 +88,15 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
     }
   };
 
-  const handleVoiceInput = () => {
-    setIsListening(!isListening);
-    // Voice input implementation would go here
+  const handleVoiceInput = async () => {
+    if (isRecording) {
+      const transcribedText = await stopRecording();
+      if (transcribedText) {
+        setInputText(transcribedText);
+      }
+    } else {
+      await startRecording();
+    }
   };
 
   const suggestionQuestions = language === 'hi' 
@@ -195,9 +202,14 @@ export function ChatInterface({ language }: ChatInterfaceProps) {
             variant="outline"
             size="icon"
             onClick={handleVoiceInput}
-            className={isListening ? 'bg-emergency text-emergency-foreground' : ''}
+            disabled={isProcessing}
+            className={isRecording ? 'bg-emergency text-emergency-foreground' : ''}
           >
-            <Mic className="w-4 h-4" />
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Mic className="w-4 h-4" />
+            )}
           </Button>
           <Button onClick={handleSendMessage}>
             <Send className="w-4 h-4" />
