@@ -26,3 +26,18 @@ verify_jwt = false
 
 [functions.corpus-search]
 verify_jwt = false
+
+[functions.voice-to-text]
+verify_jwt = false
+
+[functions.scrape-india-code]
+verify_jwt = false
+
+[functions.fetch-nha-documents]
+verify_jwt = false
+
+[functions.fetch-indian-kanoon]
+verify_jwt = false
+
+[functions.update-legal-content]
+verify_jwt = false
