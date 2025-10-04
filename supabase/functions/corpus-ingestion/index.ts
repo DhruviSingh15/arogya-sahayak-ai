@@ -48,6 +48,22 @@ serve(async (req) => {
 async function ingestDocument(data: any) {
   const { title, content, doc_type, source_url, category, tags, language = 'en', file_type } = data;
   
+  // Validate required fields
+  if (!title || typeof title !== 'string') {
+    throw new Error('Title is required and must be a string');
+  }
+  if (!content || typeof content !== 'string') {
+    throw new Error('Content is required and must be a string');
+  }
+  if (!doc_type) {
+    throw new Error('Document type (doc_type) is required');
+  }
+  if (!['en', 'hi'].includes(language)) {
+    throw new Error('Language must be either "en" or "hi"');
+  }
+  
+  console.log(`Ingesting document: ${title} (type: ${doc_type}, language: ${language}, file_type: ${file_type})`);
+  
   let textContent = content;
   
   // Handle base64 encoded binary files (PDFs, images)
@@ -73,8 +89,9 @@ async function ingestDocument(data: any) {
       }
     } 
     // Handle Word documents
-    else if (content.includes('wordprocessingml') || content.includes('msword')) {
-      throw new Error('Word document text extraction not yet implemented. Please use text files (.txt, .md) or PDF for now.');
+    else if (content.includes('wordprocessingml') || content.includes('msword') || 
+             title.toLowerCase().endsWith('.doc') || title.toLowerCase().endsWith('.docx')) {
+      throw new Error('Word documents (.doc, .docx) are not yet supported. Please convert your document to PDF or TXT format and try again.');
     }
     // For other base64 files, try to decode as text
     else {
@@ -87,8 +104,10 @@ async function ingestDocument(data: any) {
   }
   
   if (!textContent || textContent.length < 50) {
-    throw new Error('Content is too short (minimum 50 characters)');
+    throw new Error(`Content is too short (minimum 50 characters required, got ${textContent?.length || 0})`);
   }
+  
+  console.log(`Validated content: ${textContent.length} characters`);
   
   // Create checksum for deduplication
   const encoder = new TextEncoder();

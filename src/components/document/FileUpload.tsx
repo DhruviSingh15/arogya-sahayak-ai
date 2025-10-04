@@ -25,14 +25,50 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
   const { ingestDocument, isLoading } = useDocumentIngestion();
   const { toast } = useToast();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles.map(file => ({
-      file,
-      progress: 0,
-      status: 'pending' as const,
-    }));
-    setFiles(prev => [...prev, ...newFiles]);
-  }, []);
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    // Handle rejected files with specific error messages
+    if (rejectedFiles.length > 0) {
+      rejectedFiles.forEach(({ file, errors }) => {
+        errors.forEach((error: any) => {
+          let message = '';
+          if (error.code === 'file-too-large') {
+            message = `${file.name} is too large (max 20MB)`;
+          } else if (error.code === 'file-invalid-type') {
+            message = `${file.name} has an unsupported file type`;
+          } else {
+            message = `${file.name} was rejected: ${error.message}`;
+          }
+          toast({
+            title: "File Rejected",
+            description: message,
+            variant: "destructive",
+          });
+        });
+      });
+    }
+
+    // Validate that files are not folders
+    const validFiles = acceptedFiles.filter(file => {
+      if (file.type === '' && file.size === 0) {
+        toast({
+          title: "Folder Upload Not Supported",
+          description: `Cannot upload "${file.name}". Please select individual files instead.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      const newFiles = validFiles.map(file => ({
+        file,
+        progress: 0,
+        status: 'pending' as const,
+      }));
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  }, [toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -116,6 +152,22 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
 
   const readFileContent = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
+      // Validate file type
+      const supportedTextTypes = ['text/plain', 'text/markdown', 'application/json', 'text/html'];
+      const supportedBinaryTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+      const allSupportedTypes = [...supportedTextTypes, ...supportedBinaryTypes];
+      
+      if (!allSupportedTypes.includes(file.type)) {
+        reject(new Error(`Unsupported file type: ${file.type}. Supported types: TXT, MD, JSON, HTML, PDF, JPG, PNG, WEBP`));
+        return;
+      }
+
+      // Check for Word documents
+      if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) {
+        reject(new Error('Word documents are not yet supported. Please convert to PDF or TXT format.'));
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
@@ -123,16 +175,20 @@ export function FileUpload({ onUploadComplete, language }: FileUploadProps) {
         // For text files, validate content length
         if (file.type.startsWith('text/') || file.type === 'application/json') {
           if (!result || result.trim().length < 50) {
-            reject(new Error('File content is too short (minimum 50 characters)'));
+            reject(new Error('File content is too short (minimum 50 characters required)'));
           } else {
             resolve(result);
           }
         } else {
           // For binary files (PDF, images), return base64
-          resolve(result);
+          if (!result || result.length === 0) {
+            reject(new Error('File appears to be empty or corrupted'));
+          } else {
+            resolve(result);
+          }
         }
       };
-      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
       
       // Read as text for text files, as data URL for binary files
       if (file.type.startsWith('text/') || file.type === 'application/json') {
