@@ -13,11 +13,6 @@ serve(async (req) => {
 
   try {
     const { message, language = 'en' } = await req.json();
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not found');
-    }
 
     const systemPrompt = language === 'hi' 
       ? `आप एक स्वास्थ्य अधिकार और कानूनी सहायता विशेषज्ञ हैं। हमेशा संरचित JSON में उत्तर दें जिसमें शामिल हो:
@@ -59,33 +54,46 @@ serve(async (req) => {
 
 Return ONLY JSON. Provide accurate legal/medical citations with confidence scores.`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
+    }
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `${systemPrompt}\n\nUser: ${message}`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1500,
-          responseMimeType: 'application/json'
-        }
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ]
       }),
     });
 
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('Gemini API error:', data);
-      throw new Error(data.error?.message || 'Failed to get response from AI');
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'Payment required, please add funds to your Lovable AI workspace.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      console.error('AI gateway error:', data);
+      throw new Error(data.error || 'AI gateway error');
     }
 
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const responseText = data.choices?.[0]?.message?.content || '{}';
     
     // Try to parse structured response
     let parsedResponse;

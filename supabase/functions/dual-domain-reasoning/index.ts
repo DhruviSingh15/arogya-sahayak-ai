@@ -13,10 +13,10 @@ serve(async (req) => {
 
   try {
     const { query, language = 'en' } = await req.json();
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
 
-    if (!geminiApiKey || !perplexityApiKey) {
+    if (!LOVABLE_API_KEY || !perplexityApiKey) {
       throw new Error('API keys not found');
     }
 
@@ -38,26 +38,23 @@ serve(async (req) => {
       : `As a legal expert, analyze "${query}" under Indian law to identify patient rights, relevant sections, and legal options available.`;
 
     // Get medical analysis
-    const medicalResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const medicalResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: medicalPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1000,
-        }
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: language === 'hi' ? 'स्वास्थ्य विशेषज्ञ की तरह विश्लेषण करें। संक्षिप्त और सटीक रहें।' : 'Act as a medical expert. Be concise and accurate.' },
+          { role: 'user', content: medicalPrompt }
+        ]
       }),
     });
 
     const medicalData = await medicalResponse.json();
-    const medicalAnalysis = medicalData.candidates?.[0]?.content?.parts?.[0]?.text || 'No medical analysis available';
+    const medicalAnalysis = medicalData.choices?.[0]?.message?.content || 'No medical analysis available';
 
     // Get legal analysis using Perplexity for current legal information
     const legalResponse = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -111,26 +108,23 @@ Original Query: ${query}
 
 Provide a unified response that combines health advice with legal rights. Clearly explain what the person should do.`;
 
-    const fusionResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const fusionResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: fusionPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 1500,
-        }
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: language === 'hi' ? 'कानूनी और चिकित्सा विश्लेषण को मिलाकर स्पष्ट, क्रियात्मक जवाब दें।' : 'Combine legal and medical reasoning into a clear, actionable response.' },
+          { role: 'user', content: fusionPrompt }
+        ]
       }),
     });
 
     const fusionData = await fusionResponse.json();
-    const fusedResponse = fusionData.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate fused response';
+    const fusedResponse = fusionData.choices?.[0]?.message?.content || 'Unable to generate fused response';
 
     console.log('Dual-domain reasoning completed successfully');
 
