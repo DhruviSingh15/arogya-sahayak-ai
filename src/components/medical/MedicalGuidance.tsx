@@ -15,9 +15,7 @@ interface MedicalGuidanceProps {
 
 export function MedicalGuidance({ language }: MedicalGuidanceProps) {
   const [symptoms, setSymptoms] = useState('');
-  const [guidance, setGuidance] = useState('');
-  const [medicalAnalysis, setMedicalAnalysis] = useState('');
-  const [legalAnalysis, setLegalAnalysis] = useState('');
+  const [dualDomainData, setDualDomainData] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
@@ -69,9 +67,7 @@ export function MedicalGuidance({ language }: MedicalGuidanceProps) {
 
       if (error) throw error;
 
-      setGuidance(data.response);
-      setMedicalAnalysis(data.medicalAnalysis || '');
-      setLegalAnalysis(data.legalAnalysis || '');
+      setDualDomainData(data);
       toast({
         title: language === 'hi' ? 'सफलता' : 'Success',
         description: language === 'hi' ? 'चिकित्सा सलाह मिल गई' : 'Medical guidance received',
@@ -168,11 +164,19 @@ export function MedicalGuidance({ language }: MedicalGuidanceProps) {
         </CardContent>
       </Card>
 
-      {guidance && (
+      {dualDomainData && (
         <DualDomainDisplay 
-          response={guidance}
-          medicalAnalysis={medicalAnalysis}
-          legalAnalysis={legalAnalysis}
+          response={dualDomainData.response}
+          medicalAnalysis={dualDomainData.medicalAnalysis}
+          legalAnalysis={dualDomainData.legalAnalysis}
+          medicalSummary={dualDomainData.medicalSummary}
+          legalSummary={dualDomainData.legalSummary}
+          combinedAdvice={dualDomainData.combinedAdvice}
+          confidence={dualDomainData.confidence}
+          risk={dualDomainData.risk}
+          citations={dualDomainData.citations}
+          actions={dualDomainData.actions}
+          weights={dualDomainData.weights}
           language={language}
         />
       )}

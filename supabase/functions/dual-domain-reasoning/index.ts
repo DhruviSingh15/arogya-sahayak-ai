@@ -87,28 +87,116 @@ serve(async (req) => {
     const legalData = await legalResponse.json();
     const legalAnalysis = legalData.choices?.[0]?.message?.content || 'No legal analysis available';
 
-    // Step 4: Fusion layer - combine medical and legal insights
-    const fusionPrompt = language === 'hi' 
-      ? `निम्नलिखित चिकित्सा और कानूनी विश्लेषण को मिलाकर एक व्यापक जवाब दें:
+    // Step 4: Extract structured data from medical and legal analyses
+    const extractStructure = async (text: string, domain: 'medical' | 'legal') => {
+      const extractPrompt = language === 'hi'
+        ? `निम्नलिखित ${domain === 'medical' ? 'चिकित्सा' : 'कानूनी'} विश्लेषण से JSON निकालें:
 
-चिकित्सा विश्लेषण: ${medicalAnalysis}
+${text}
 
-कानूनी विश्लेषण: ${legalAnalysis}
+JSON फॉर्मेट में लौटाएं:
+{
+  "summary": "मुख्य सारांश",
+  "confidence": 0.0-1.0,
+  "risk": "low|medium|high",
+  "citations": [{"source": "स्रोत", "detail": "विवरण"}],
+  "actions": ["कार्य 1", "कार्य 2"]
+}`
+        : `Extract structured data from this ${domain} analysis:
+
+${text}
+
+Return JSON format:
+{
+  "summary": "main summary",
+  "confidence": 0.0-1.0,
+  "risk": "low|medium|high",
+  "citations": [{"source": "source", "detail": "detail"}],
+  "actions": ["action 1", "action 2"]
+}`;
+
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: 'Extract structured data. Return only valid JSON.' },
+            { role: 'user', content: extractPrompt }
+          ]
+        }),
+      });
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '{}';
+      
+      try {
+        return JSON.parse(content);
+      } catch {
+        return {
+          summary: text.substring(0, 200),
+          confidence: 0.5,
+          risk: 'medium',
+          citations: [],
+          actions: []
+        };
+      }
+    };
+
+    const [medicalStructured, legalStructured] = await Promise.all([
+      extractStructure(medicalAnalysis, 'medical'),
+      extractStructure(legalAnalysis, 'legal')
+    ]);
+
+    // Step 5: Weighted Fusion (α=0.6 for medical, β=0.4 for legal in health-legal contexts)
+    const alpha = 0.6;
+    const beta = 0.4;
+    
+    // Normalize and combine confidence scores
+    const weightedConfidence = (alpha * medicalStructured.confidence + beta * legalStructured.confidence);
+    
+    // Determine combined risk level
+    const riskLevels = { low: 1, medium: 2, high: 3 };
+    const medicalRiskScore = riskLevels[medicalStructured.risk] || 2;
+    const legalRiskScore = riskLevels[legalStructured.risk] || 2;
+    const combinedRiskScore = Math.round(alpha * medicalRiskScore + beta * legalRiskScore);
+    const combinedRisk = Object.keys(riskLevels).find(k => riskLevels[k] === combinedRiskScore) || 'medium';
+    
+    // Merge citations
+    const mergedCitations = [
+      ...medicalStructured.citations.map(c => ({ ...c, domain: 'medical' })),
+      ...legalStructured.citations.map(c => ({ ...c, domain: 'legal' }))
+    ];
+    
+    // Combine actions
+    const combinedActions = [
+      ...(medicalStructured.actions || []),
+      ...(legalStructured.actions || [])
+    ];
+
+    // Step 6: Generate unified advice using weighted context
+    const unifiedPrompt = language === 'hi'
+      ? `चिकित्सा और कानूनी दृष्टिकोण को मिलाकर एकीकृत सलाह दें:
+
+चिकित्सा सारांश (वजन ${alpha}): ${medicalStructured.summary}
+कानूनी सारांश (वजन ${beta}): ${legalStructured.summary}
 
 मूल प्रश्न: ${query}
 
-एक एकीकृत उत्तर दें जो स्वास्थ्य सलाह और कानूनी अधिकारों को जोड़े। स्पष्ट रूप से बताएं कि व्यक्ति को क्या करना चाहिए।`
-      : `Combine the following medical and legal analyses to provide a comprehensive answer:
+संयुक्त सलाह दें जो दोनों क्षेत्रों को संतुलित करे।`
+      : `Provide unified advice combining medical and legal perspectives:
 
-Medical Analysis: ${medicalAnalysis}
-
-Legal Analysis: ${legalAnalysis}
+Medical Summary (weight ${alpha}): ${medicalStructured.summary}
+Legal Summary (weight ${beta}): ${legalStructured.summary}
 
 Original Query: ${query}
 
-Provide a unified response that combines health advice with legal rights. Clearly explain what the person should do.`;
+Give combined advice that balances both domains.`;
 
-    const fusionResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const unifiedResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -117,19 +205,29 @@ Provide a unified response that combines health advice with legal rights. Clearl
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: language === 'hi' ? 'कानूनी और चिकित्सा विश्लेषण को मिलाकर स्पष्ट, क्रियात्मक जवाब दें।' : 'Combine legal and medical reasoning into a clear, actionable response.' },
-          { role: 'user', content: fusionPrompt }
+          { role: 'system', content: language === 'hi' ? 'संतुलित, क्रियात्मक सलाह दें।' : 'Provide balanced, actionable advice.' },
+          { role: 'user', content: unifiedPrompt }
         ]
       }),
     });
 
-    const fusionData = await fusionResponse.json();
-    const fusedResponse = fusionData.choices?.[0]?.message?.content || 'Unable to generate fused response';
+    const unifiedData = await unifiedResponse.json();
+    const combinedAdvice = unifiedData.choices?.[0]?.message?.content || 'Unable to generate combined advice';
 
     console.log('Dual-domain reasoning completed successfully');
 
+    // Step 7: Return unified structured JSON
     return new Response(JSON.stringify({ 
-      response: fusedResponse,
+      medicalSummary: medicalStructured.summary,
+      legalSummary: legalStructured.summary,
+      combinedAdvice,
+      confidence: weightedConfidence,
+      risk: combinedRisk,
+      citations: mergedCitations,
+      actions: combinedActions,
+      weights: { medical: alpha, legal: beta },
+      // Legacy fields for backward compatibility
+      response: combinedAdvice,
       medicalAnalysis,
       legalAnalysis 
     }), {

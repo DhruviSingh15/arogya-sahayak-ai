@@ -16,9 +16,7 @@ interface LegalAssistanceProps {
 
 export function LegalAssistance({ language }: LegalAssistanceProps) {
   const [legalIssue, setLegalIssue] = useState('');
-  const [assistance, setAssistance] = useState('');
-  const [medicalAnalysis, setMedicalAnalysis] = useState('');
-  const [legalAnalysis, setLegalAnalysis] = useState('');
+  const [dualDomainData, setDualDomainData] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
@@ -70,9 +68,7 @@ export function LegalAssistance({ language }: LegalAssistanceProps) {
 
       if (error) throw error;
 
-      setAssistance(data.response);
-      setMedicalAnalysis(data.medicalAnalysis || '');
-      setLegalAnalysis(data.legalAnalysis || '');
+      setDualDomainData(data);
       toast({
         title: language === 'hi' ? 'सफलता' : 'Success',
         description: language === 'hi' ? 'कानूनी सहायता मिल गई' : 'Legal assistance received',
@@ -157,12 +153,20 @@ export function LegalAssistance({ language }: LegalAssistanceProps) {
         </CardContent>
       </Card>
 
-      {assistance && (
+      {dualDomainData && (
         <div className="space-y-4">
           <DualDomainDisplay 
-            response={assistance}
-            medicalAnalysis={medicalAnalysis}
-            legalAnalysis={legalAnalysis}
+            response={dualDomainData.response}
+            medicalAnalysis={dualDomainData.medicalAnalysis}
+            legalAnalysis={dualDomainData.legalAnalysis}
+            medicalSummary={dualDomainData.medicalSummary}
+            legalSummary={dualDomainData.legalSummary}
+            combinedAdvice={dualDomainData.combinedAdvice}
+            confidence={dualDomainData.confidence}
+            risk={dualDomainData.risk}
+            citations={dualDomainData.citations}
+            actions={dualDomainData.actions}
+            weights={dualDomainData.weights}
             language={language}
           />
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
