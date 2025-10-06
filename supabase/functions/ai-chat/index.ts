@@ -93,13 +93,40 @@ Return ONLY JSON. Provide accurate legal/medical citations with confidence score
       throw new Error(data.error || 'AI gateway error');
     }
 
-    const responseText = data.choices?.[0]?.message?.content || '{}';
+    let responseText = data.choices?.[0]?.message?.content || '{}';
+    
+    // Strip markdown code blocks if present
+    const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      responseText = jsonMatch[1].trim();
+    }
     
     // Try to parse structured response
     let parsedResponse;
     try {
       parsedResponse = JSON.parse(responseText);
-    } catch {
+      
+      // Validate structure and ensure all required fields exist
+      if (!parsedResponse.response) {
+        parsedResponse.response = responseText;
+      }
+      if (!parsedResponse.explanation) {
+        parsedResponse.explanation = {
+          citations: [],
+          explanation: { 
+            english: "AI provided general guidance.", 
+            hindi: "AI ने सामान्य मार्गदर्शन प्रदान किया।" 
+          },
+          actionSteps: { 
+            english: ["Consult appropriate professionals"], 
+            hindi: ["उपयुक्त पेशेवरों से सलाह लें"] 
+          },
+          confidenceScore: 0.5,
+          riskLevel: "medium"
+        };
+      }
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'Response text:', responseText);
       // Fallback for non-JSON responses
       parsedResponse = {
         response: responseText || 'Sorry, I could not process your request.',
