@@ -13,10 +13,10 @@ serve(async (req) => {
 
   try {
     const { fileData, question, language = 'en' } = await req.json();
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not found');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY not found');
     }
 
     if (!fileData) {
@@ -69,35 +69,48 @@ serve(async (req) => {
 }`;
 
     const prompt = `${promptBase}\n\n${taskInstruction}\n\n${jsonSchema}`;
+    
+    const userMessage = `${prompt}\n\n${question ? (language === 'hi' ? `उपयोगकर्ता का प्रश्न: ${question}` : `User question: ${question}`) : ''}\n\nAnalyze this PDF document (base64 data provided).`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: 'application/pdf', data: fileData } },
-            ...(question ? [{ text: language === 'hi' ? `उपयोगकर्ता का प्रश्न (यदि प्रासंगिक हो): ${question}` : `User question (if relevant): ${question}` }] : [])
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2000,
-          responseMimeType: 'application/json'
-        }
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are an expert legal-medical analyst. Analyze documents and provide structured JSON responses.' },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.2,
+        max_tokens: 2000
       })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Gemini API error:', data);
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      if (response.status === 402) {
+        throw new Error('Payment required. Please add credits to your workspace.');
+      }
+      console.error('AI Gateway error:', data);
       throw new Error(data.error?.message || 'Failed to analyze PDF');
     }
 
-    // Gemini returns JSON in text; attempt to parse
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Parse response from AI Gateway
+    let raw = data.choices?.[0]?.message?.content || '';
+    
+    // Strip markdown code blocks if present
+    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      raw = jsonMatch[1].trim();
+    }
+    
     let result: unknown = null;
     let explanation: unknown = null;
     try {

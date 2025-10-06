@@ -13,10 +13,10 @@ serve(async (req) => {
 
   try {
     const { documentType, details = {}, language = 'en', evidence = [] } = await req.json();
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not found');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY not found');
     }
 
     // Helper to safely parse JSON from model output
@@ -111,21 +111,35 @@ serve(async (req) => {
   "derived_subject": string | null
 }`;
 
-      const extractionParts = [
-        ...evidence.map((f: any) => ({ inlineData: { mimeType: f.mimeType || 'application/pdf', data: f.data } })),
-        { text: extractionPrompt },
-      ];
+      const evidenceSummary = evidence.map((f: any, i: number) => 
+        `Document ${i + 1}: ${f.mimeType || 'application/pdf'} (base64 data provided)`
+      ).join('\n');
 
-      const extractionRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+      const extractionRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: extractionParts }], generationConfig: { temperature: 0.2, maxOutputTokens: 1000 } }),
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: 'You are a document data extraction expert. Extract structured information from documents.' },
+            { role: 'user', content: `${extractionPrompt}\n\n${evidenceSummary}` }
+          ],
+          temperature: 0.2,
+          max_tokens: 1000
+        }),
       });
       const extractionData = await extractionRes.json();
       if (!extractionRes.ok) {
-        console.error('Gemini extraction error:', extractionData);
+        console.error('AI extraction error:', extractionData);
       } else {
-        const text = extractionData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        let text = extractionData.choices?.[0]?.message?.content || '';
+        const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          text = jsonMatch[1].trim();
+        }
         extracted = safeJsonParse(text);
       }
     }
@@ -181,23 +195,43 @@ serve(async (req) => {
       ? `${baseContext}\n\nटेम्पलेट: ${templatePrompts[selectedTemplate]}\n\nउपयोगकर्ता विवरण: ${JSON.stringify(details)}\n\nनिकाले गए विवरण: ${JSON.stringify(extracted || {})}\n\nमहत्वपूर्ण: निकाले गए संदर्भीय मेटाडेटा का उपयोग करके दस्तावेज़ को व्यापक रूप से भरें:\n- अस्पताल का नाम, पता, पंजीकरण संख्या\n- डॉक्टर का नाम, आईडी, योग्यता\n- इलाज की तारीखें, निदान, उपचार विवरण\n- बिल ब्रेकडाउन और विशिष्ट शुल्क\n- घटना स्थान और तारीख\n- बीमा विवरण और दावा संख्या\n\nकृपया निम्नलिखित JSON संरचना में उत्तर दें:\n\n{\n  "document": "पूरा दस्तावेज़ पाठ - सभी निकाले गए मेटाडेटा को शामिल करते हुए (औपचारिक हेडर, प्राप्तकर्ता का पूरा विवरण, विषय, व्यापक तथ्य अनुभाग, विशिष्ट आरोप/शिकायतें, कानूनी आधार, प्रार्थित राहत, संलग्नक सूची)",\n  "explanation": {\n    "citations": [{"type": "legal", "title": "कानून/नियम का नाम", "section": "धारा संख्या", "authority": "प्राधिकरण", "url": "वैकल्पिक लिंक"}],\n    "explanation": {\n      "english": "Why this template and legal basis applies based on extracted evidence",\n      "hindi": "निकाले गए प्रमाण के आधार पर यह टेम्पलेट और कानूनी आधार क्यों लागू है"\n    },\n    "actionSteps": {\n      "english": ["Submit to specific authority", "Include extracted evidence", "Follow complaint process", "Maintain records"],\n      "hindi": ["विशिष्ट प्राधिकरण को जमा करें", "निकाले गए प्रमाण शामिल करें", "शिकायत प्रक्रिया का पालन करें", "रिकॉर्ड रखें"]\n    },\n    "confidenceScore": 0.0-1.0,\n    "riskLevel": "low|medium|high"\n  }\n}\n\nकेवल JSON लौटाएं।`
       : `${baseContext}\n\nTemplate: ${templatePrompts[selectedTemplate]}\n\nUser-provided details: ${JSON.stringify(details)}\n\nExtracted evidence details: ${JSON.stringify(extracted || {})}\n\nIMPORTANT: Use the extracted contextual metadata to comprehensively auto-fill the document:\n- Hospital name, address, registration number\n- Doctor name, ID, qualifications\n- Treatment dates, diagnosis, treatment details\n- Bill breakdown and specific charges\n- Incident location and date\n- Insurance details and claim numbers\n\nPlease respond in the following JSON structure:\n\n{\n  "document": "Complete document text - incorporating ALL extracted metadata (formal header, complete recipient details, subject, comprehensive facts section, specific allegations/complaints, legal basis, reliefs sought, list of enclosures)",\n  "explanation": {\n    "citations": [{"type": "legal", "title": "Law/Act name", "section": "section number", "authority": "issuing authority", "url": "optional link"}],\n    "explanation": {\n      "english": "Why this template and legal basis applies based on extracted evidence",\n      "hindi": "निकाले गए प्रमाण के आधार पर यह टेम्पलेट और कानूनी आधार क्यों लागू है"\n    },\n    "actionSteps": {\n      "english": ["Submit to specific authority", "Include extracted evidence", "Follow complaint process", "Maintain records"],\n      "hindi": ["विशिष्ट प्राधिकरण को जमा करें", "निकाले गए प्रमाण शामिल करें", "शिकायत प्रक्रिया का पालन करें", "रिकॉर्ड रखें"]\n    },\n    "confidenceScore": 0.0-1.0,\n    "riskLevel": "low|medium|high"\n  }\n}\n\nReturn ONLY JSON.`;
 
-    const genRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const genRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: instruction }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 2000 },
-      } as any),
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are a legal document drafting expert. Create formal legal documents with proper structure.' },
+          { role: 'user', content: instruction }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000
+      }),
     });
 
     const data = await genRes.json();
 
     if (!genRes.ok) {
-      console.error('Gemini API error (generation):', data);
+      if (genRes.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      if (genRes.status === 402) {
+        throw new Error('Payment required. Please add credits to your workspace.');
+      }
+      console.error('AI Gateway error (generation):', data);
       throw new Error(data.error?.message || 'Failed to generate document');
     }
 
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    let responseText = data.choices?.[0]?.message?.content || '{}';
+    
+    // Strip markdown code blocks if present
+    const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      responseText = jsonMatch[1].trim();
+    }
     
     // Try to parse structured response
     let parsedResponse;

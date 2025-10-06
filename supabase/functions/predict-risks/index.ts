@@ -13,10 +13,10 @@ serve(async (req) => {
 
   try {
     const { files, language = 'en' } = await req.json();
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not found');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY not found');
     }
 
     if (!files || files.length === 0) {
@@ -63,42 +63,47 @@ serve(async (req) => {
 
     const prompt = `${promptBase}\n\n${taskInstruction}\n\nRisk Analysis Schema:\n${jsonSchema}\n\nExplanation Schema:\n${explanationSchema}\n\nAnalyze for:\n1. Policy exclusions that could lead to claim rejection\n2. Pre-existing condition clauses\n3. Coverage gaps and limitations\n4. Waiting periods and their implications\n5. Premium increase triggers\n6. Terms that could violate patient rights\n7. Potential insurance fraud triggers\n8. Documentation requirements that could cause issues`;
 
-    const contents = [{
-      parts: [{ text: prompt }]
-    }];
+    const filesSummary = files.map((f: any, i: number) => 
+      `Document ${i + 1}: ${f.type || 'application/pdf'} (base64 data provided)`
+    ).join('\n');
 
-    // Add file data to contents
-    for (const file of files) {
-      const mimeType = file.type || 'application/pdf';
-      contents[0].parts.push({
-        inline_data: {
-          mime_type: mimeType,
-          data: file.data
-        }
-      });
-    }
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 3000,
-          responseMimeType: 'application/json'
-        }
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are an expert AI risk analyst specializing in insurance policy and health record analysis.' },
+          { role: 'user', content: `${prompt}\n\n${filesSummary}` }
+        ],
+        temperature: 0.3,
+        max_tokens: 3000
       })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Gemini API error:', data);
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      if (response.status === 402) {
+        throw new Error('Payment required. Please add credits to your workspace.');
+      }
+      console.error('AI Gateway error:', data);
       throw new Error(data.error?.message || 'Failed to analyze risks');
     }
 
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let rawText = data.choices?.[0]?.message?.content || '';
+    
+    // Strip markdown code blocks if present
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      rawText = jsonMatch[1].trim();
+    }
     console.log('Raw Gemini response:', rawText);
 
     let result = null;
