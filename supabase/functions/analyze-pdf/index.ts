@@ -103,25 +103,55 @@ serve(async (req) => {
     }
 
     // Parse response from AI Gateway
-    let raw = data.choices?.[0]?.message?.content || '';
+    let rawText = data.choices?.[0]?.message?.content || '';
     
     // Strip markdown code blocks if present
-    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    let jsonText = rawText;
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (jsonMatch) {
-      raw = jsonMatch[1].trim();
+      jsonText = jsonMatch[1].trim();
     }
     
     let result: unknown = null;
     let explanation: unknown = null;
+    
     try {
-      const parsed = raw ? JSON.parse(raw) : null;
-      result = parsed;
-      explanation = parsed?.explanation || null;
+      const parsed = JSON.parse(jsonText);
+      
+      // Extract structured result
+      result = {
+        summary: parsed.summary || {
+          overallRisk: 'medium',
+          highRiskFindings: [],
+          notes: parsed.notes || 'Analysis completed',
+          confidenceScore: parsed.confidenceScore || 0.7
+        },
+        clauses: parsed.clauses || []
+      };
+      
+      // Extract explanation
+      explanation = parsed.explanation || {
+        citations: [],
+        explanation: {
+          english: "Document analysis completed",
+          hindi: "दस्तावेज़ विश्लेषण पूर्ण"
+        },
+        actionSteps: {
+          english: ["Review document carefully"],
+          hindi: ["दस्तावेज़ की ध्यानपूर्वक समीक्षा करें"]
+        },
+        confidenceScore: parsed.confidenceScore || 0.7,
+        riskLevel: parsed.summary?.overallRisk || 'medium'
+      };
     } catch (e) {
-      console.warn('Failed to parse JSON, returning raw text');
+      console.error('JSON parse error:', e);
+      console.log('Raw text:', rawText);
+      // Return raw text as fallback
+      result = null;
+      explanation = null;
     }
 
-    return new Response(JSON.stringify({ result, explanation, raw }), {
+    return new Response(JSON.stringify({ result, explanation, raw: rawText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

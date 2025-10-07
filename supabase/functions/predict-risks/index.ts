@@ -100,24 +100,39 @@ serve(async (req) => {
     let rawText = data.choices?.[0]?.message?.content || '';
     
     // Strip markdown code blocks if present
+    let jsonText = rawText;
     const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (jsonMatch) {
-      rawText = jsonMatch[1].trim();
+      jsonText = jsonMatch[1].trim();
     }
-    console.log('Raw Gemini response:', rawText);
+    console.log('Cleaned response:', jsonText.substring(0, 500));
 
     let result = null;
     let explanation = null;
 
     try {
-      const parsed = JSON.parse(rawText);
+      const parsed = JSON.parse(jsonText);
+      
+      // Extract structured risk analysis
       result = {
-        overallRiskScore: parsed.overallRiskScore || 0,
-        predictions: parsed.predictions || [],
-        recommendation: parsed.recommendation || ''
+        overallRiskScore: parsed.overallRiskScore || 50,
+        predictions: (parsed.predictions || []).map((p: any) => ({
+          id: p.id || `pred-${Math.random()}`,
+          riskType: p.riskType || 'Unknown Risk',
+          riskLevel: p.riskLevel || 'medium',
+          description: p.description || '',
+          likelihood: p.likelihood || 50,
+          timeline: p.timeline || '1-3 months',
+          impact: p.impact || '',
+          preventiveActions: p.preventiveActions || [],
+          evidence: p.evidence || []
+        })),
+        recommendation: parsed.recommendation || (language === 'hi' 
+          ? 'पॉलिसी की ध्यानपूर्वक समीक्षा करें' 
+          : 'Review policy carefully')
       };
       
-      // Generate explanation
+      // Extract explanation
       explanation = {
         citations: parsed.citations || [],
         explanation: parsed.explanation || {
@@ -128,47 +143,47 @@ serve(async (req) => {
           english: ["Review policy terms", "Consult with insurance agent", "Consider additional coverage"],
           hindi: ["पॉलिसी शर्तों की समीक्षा करें", "बीमा एजेंट से सलाह लें", "अतिरिक्त कवरेज पर विचार करें"]
         },
-        confidenceScore: parsed.confidenceScore || 0.8,
-        riskLevel: parsed.riskLevel || 'medium'
+        confidenceScore: parsed.confidenceScore || 0.75,
+        riskLevel: parsed.riskLevel || (result.overallRiskScore > 70 ? 'high' : result.overallRiskScore > 40 ? 'medium' : 'low')
       };
     } catch (parseError) {
       console.error('JSON parsing failed:', parseError);
-      console.log('Raw text that failed to parse:', rawText);
+      console.log('Failed text:', rawText.substring(0, 300));
       
-      // Fallback response
+      // Fallback response with meaningful defaults
       result = {
         overallRiskScore: 50,
         predictions: [{
           id: 'fallback-1',
-          riskType: 'Analysis Error',
+          riskType: language === 'hi' ? 'विश्लेषण त्रुटि' : 'Analysis Error',
           riskLevel: 'medium',
           description: language === 'hi' 
-            ? 'दस्तावेज़ विश्लेषण में त्रुटि हुई। कृपया दोबारा प्रयास करें।'
-            : 'Error occurred during document analysis. Please try again.',
+            ? 'दस्तावेज़ विश्लेषण में त्रुटि। कृपया पुनः प्रयास करें।'
+            : 'Error in document analysis. Please try again.',
           likelihood: 50,
           timeline: '1-3 months',
           impact: language === 'hi' 
-            ? 'विश्लेषण पूर्ण नहीं हो सका'
-            : 'Analysis could not be completed',
+            ? 'विश्लेषण अपूर्ण'
+            : 'Analysis incomplete',
           preventiveActions: [
             language === 'hi' ? 'दस्तावेज़ की गुणवत्ता जांचें' : 'Check document quality'
           ],
           evidence: []
         }],
         recommendation: language === 'hi' 
-          ? 'कृपया स्पष्ट और पूर्ण दस्तावेज़ अपलोड करें।'
-          : 'Please upload clear and complete documents.'
+          ? 'कृपया स्पष्ट दस्तावेज़ अपलोड करें'
+          : 'Please upload clear documents'
       };
 
       explanation = {
         citations: [],
         explanation: {
           english: "Document analysis encountered technical issues",
-          hindi: "दस्तावेज़ विश्लेषण में तकनीकी समस्याएं आईं"
+          hindi: "दस्तावेज़ विश्लेषण में तकनीकी समस्या"
         },
         actionSteps: {
-          english: ["Try uploading clearer documents", "Ensure documents are complete"],
-          hindi: ["स्पष्ट दस्तावेज़ अपलोड करने का प्रयास करें", "सुनिश्चित करें कि दस्तावेज़ पूर्ण हैं"]
+          english: ["Try clearer documents", "Ensure complete files"],
+          hindi: ["स्पष्ट दस्तावेज़ प्रयास करें", "पूर्ण फाइलें सुनिश्चित करें"]
         },
         confidenceScore: 0.3,
         riskLevel: 'medium'
