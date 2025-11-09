@@ -23,72 +23,72 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Comprehensive prompt for Gemini to provide legal information
+    // Comprehensive prompt for Gemini to provide legal information in plain text
     const prompt = language === 'hi' 
       ? `भारत में ${topic} के बारे में विस्तृत और व्यापक कानूनी जानकारी प्रदान करें। एक सुव्यवस्थित लेख बनाएं जिसमें शामिल हो:
 
-**${topic} - भारत में कानूनी जानकारी**
+${topic} - भारत में कानूनी जानकारी
 
-1. **परिचय और अवलोकन**
-   - ${topic} क्या है और यह क्यों महत्वपूर्ण है
+1. परिचय और अवलोकन
+   ${topic} क्या है और यह क्यों महत्वपूर्ण है
 
-2. **संबंधित कानून और अधिनियम**
-   - प्रमुख कानूनी धाराएं और अधिनियम
-   - संवैधानिक प्रावधान
-   - हालिया संशोधन (2020-2025)
+2. संबंधित कानून और अधिनियम
+   प्रमुख कानूनी धाराएं और अधिनियम
+   संवैधानिक प्रावधान
+   हालिया संशोधन (2020-2025)
 
-3. **नागरिकों के अधिकार और पात्रता**
-   - मौलिक अधिकार
-   - कानूनी संरक्षण
-   - पात्रता मानदंड
+3. नागरिकों के अधिकार और पात्रता
+   मौलिक अधिकार
+   कानूनी संरक्षण
+   पात्रता मानदंड
 
-4. **सरकारी योजनाएं और लाभ**
-   - आयुष्मान भारत योजना
-   - अन्य संबंधित सरकारी योजनाएं
-   - कैसे लाभ उठाएं
+4. सरकारी योजनाएं और लाभ
+   आयुष्मान भारत योजना
+   अन्य संबंधित सरकारी योजनाएं
+   कैसे लाभ उठाएं
 
-5. **उपलब्ध उपाय और प्रक्रिया**
-   - शिकायत दर्ज करने की प्रक्रिया
-   - कानूनी उपाय
-   - सहायता केंद्र और हेल्पलाइन
+5. उपलब्ध उपाय और प्रक्रिया
+   शिकायत दर्ज करने की प्रक्रिया
+   कानूनी उपाय
+   सहायता केंद्र और हेल्पलाइन
 
-6. **हालिया विकास और केस स्टडी**
-   - महत्वपूर्ण न्यायिक निर्णय
-   - नीति परिवर्तन
+6. हालिया विकास और केस स्टडी
+   महत्वपूर्ण न्यायिक निर्णय
+   नीति परिवर्तन
 
-कृपया विस्तृत, व्यावहारिक और सटीक जानकारी दें। शीर्षक, उप-शीर्षक और बुलेट पॉइंट का उपयोग करें।`
+कृपया विस्तृत, व्यावहारिक और सटीक जानकारी दें। सादे पाठ का उपयोग करें, बिना किसी विशेष प्रतीक (जैसे तारे, हैश, या डैश) के। केवल संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
       : `Provide comprehensive and detailed legal information about ${topic} in India. Create a well-structured article that includes:
 
-**${topic} - Legal Information in India**
+${topic} - Legal Information in India
 
-1. **Introduction and Overview**
-   - What is ${topic} and why it matters
+1. Introduction and Overview
+   What is ${topic} and why it matters
 
-2. **Relevant Laws and Acts**
-   - Key legal sections and acts
-   - Constitutional provisions
-   - Recent amendments (2020-2025)
+2. Relevant Laws and Acts
+   Key legal sections and acts
+   Constitutional provisions
+   Recent amendments (2020-2025)
 
-3. **Citizens' Rights and Eligibility**
-   - Fundamental rights
-   - Legal protections
-   - Eligibility criteria
+3. Citizens' Rights and Eligibility
+   Fundamental rights
+   Legal protections
+   Eligibility criteria
 
-4. **Government Schemes and Benefits**
-   - Ayushman Bharat Scheme
-   - Other related government programs
-   - How to access benefits
+4. Government Schemes and Benefits
+   Ayushman Bharat Scheme
+   Other related government programs
+   How to access benefits
 
-5. **Available Remedies and Procedures**
-   - Complaint filing process
-   - Legal remedies
-   - Support centers and helplines
+5. Available Remedies and Procedures
+   Complaint filing process
+   Legal remedies
+   Support centers and helplines
 
-6. **Recent Developments and Case Studies**
-   - Important judicial decisions
-   - Policy changes
+6. Recent Developments and Case Studies
+   Important judicial decisions
+   Policy changes
 
-Please provide detailed, actionable, and accurate information. Use headings, subheadings, and bullet points for clarity.`;
+Please provide detailed, actionable, and accurate information in plain text format. Do NOT use any markdown formatting symbols like asterisks (*), hashes (#), or dashes (-) for bullets or emphasis. Use only numbers and regular punctuation. Write in clear paragraphs with proper line breaks.`;
 
     console.log('Fetching from Gemini API...');
 
