@@ -6,9 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileText, Upload, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ClauseResults, ClauseAnalysisResult } from '@/components/pdf/ClauseResults';
-import { ExplainabilityCard, ExplanationData } from '@/components/ai/ExplainabilityCard';
 import { supabase } from '@/integrations/supabase/client';
+
 interface PdfAnalyzerProps {
   language: 'en' | 'hi';
 }
@@ -16,9 +15,7 @@ interface PdfAnalyzerProps {
 export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [question, setQuestion] = useState('');
-  const [result, setResult] = useState<ClauseAnalysisResult | null>(null);
-  const [explanation, setExplanation] = useState<ExplanationData | null>(null);
-  const [raw, setRaw] = useState('');
+  const [analysis, setAnalysis] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
@@ -26,9 +23,7 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
     const file = event.target.files?.[0];
     if (file && file.type === 'application/pdf') {
       setSelectedFile(file);
-      setResult(null);
-      setExplanation(null);
-      setRaw('');
+      setAnalysis('');
     } else {
       toast({
         title: language === 'hi' ? 'त्रुटि' : 'Error',
@@ -78,19 +73,15 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
         throw new Error(error.message || 'Failed to analyze PDF');
       }
 
-      const hasResult = !!data?.result;
-      const hasExplanation = !!data?.explanation;
-      const hasRaw = !!data?.raw;
-      if (!hasResult && !hasRaw) {
-        console.error('No structured result or raw text in response:', data);
+      if (!data?.analysis) {
+        console.error('No analysis in response:', data);
         throw new Error('No analysis received');
       }
-      setResult(hasResult ? data.result : null);
-      setExplanation(hasExplanation ? data.explanation : null);
-      setRaw(hasRaw ? data.raw : '');
+      
+      setAnalysis(data.analysis);
       toast({
         title: language === 'hi' ? 'सफलता' : 'Success',
-        description: language === 'hi' ? 'धारा-स्तरीय विश्लेषण पूरा हुआ' : 'Clause-level analysis completed',
+        description: language === 'hi' ? 'विश्लेषण पूरा हुआ' : 'Analysis completed',
       });
     } catch (error) {
       console.error('Error analyzing PDF:', error);
@@ -198,29 +189,16 @@ export function PdfAnalyzer({ language }: PdfAnalyzerProps) {
         </CardContent>
       </Card>
 
-      {result && (
-        <>
-          <ClauseResults result={result} language={language} />
-          {explanation && (
-            <ExplainabilityCard 
-              data={explanation} 
-              language={language}
-              title={language === 'hi' ? 'AI विश्लेषण स्पष्टीकरण' : 'AI Analysis Explanation'}
-            />
-          )}
-        </>
-      )}
-
-      {!result && raw && (
+      {analysis && (
         <Card>
           <CardHeader>
             <CardTitle>
-              {language === 'hi' ? 'विश्लेषण (पाठ)' : 'Analysis (Raw Text)'}
+              {language === 'hi' ? 'विश्लेषण परिणाम' : 'Analysis Result'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
-              {raw}
+            <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm leading-relaxed">
+              {analysis}
             </div>
           </CardContent>
         </Card>

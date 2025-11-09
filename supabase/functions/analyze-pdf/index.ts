@@ -24,53 +24,14 @@ serve(async (req) => {
     }
 
     const promptBase = language === 'hi'
-      ? `आप एक कानूनी-चिकित्सा विशेषज्ञ हैं। PDF का विश्लेषण करें और स्पष्टीकरण के साथ प्रत्येक धारा को वर्गीकृत करें।`
-      : `You are a legal-medical expert. Analyze the PDF and classify each clause with explainable AI insights.`;
+      ? `आप एक कानूनी-चिकित्सा विशेषज्ञ हैं। PDF दस्तावेज़ का विश्लेषण करें और सरल, संक्षिप्त भाषा में उत्तर दें।`
+      : `You are a legal-medical expert. Analyze the PDF document and respond in simple, concise plain language.`;
 
     const taskInstruction = language === 'hi'
-      ? `कार्य: ${question}\n\nकृपया विश्वसनीयता स्कोर और स्रोत संदर्भों के साथ निम्नलिखित JSON स्कीमा में उत्तर दें:`
-      : `Task: ${question}\n\nPlease respond in the following JSON schema with confidence scores and source citations:`;
+      ? `कार्य: ${question}\n\nमहत्वपूर्ण निर्देश:\n- सरल, सीधी भाषा में लिखें\n- संक्षिप्त और स्पष्ट रहें\n- किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें\n- केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें\n- JSON या तकनीकी प्रारूप का उपयोग न करें\n\nकृपया निम्नलिखित को शामिल करें:\n1. दस्तावेज़ का संक्षिप्त सारांश\n2. मुख्य निष्कर्ष (यदि कोई जोखिम या समस्या हो)\n3. सिफारिशें या कार्रवाई के कदम\n4. प्रासंगिक कानूनी संदर्भ (यदि लागू हो)`
+      : `Task: ${question}\n\nIMPORTANT INSTRUCTIONS:\n- Write in simple, straightforward language\n- Be brief and clear\n- Do NOT use any special symbols (*, #, -) for formatting\n- Use only plain text, numbers, and regular punctuation\n- Do NOT use JSON or technical formats\n\nPlease include:\n1. Brief summary of the document\n2. Key findings (if any risks or issues)\n3. Recommendations or action steps\n4. Relevant legal references (if applicable)`;
 
-    const jsonSchema = `{
-  "summary": {
-    "overallRisk": "low|medium|high",
-    "highRiskFindings": ["finding1", "finding2", ...],
-    "notes": "brief analysis summary",
-    "confidenceScore": 0.0-1.0
-  },
-  "clauses": [{
-    "id": "unique_id",
-    "clauseText": "extracted clause text",
-    "category": "exclusions|hidden_charges|malpractice|compliance_issues|other",
-    "riskLevel": "low|medium|high",
-    "plainLanguage": "explanation in plain language",
-    "recommendedAction": "what user should do",
-    "legalMappings": [{
-      "law": "Act/Regulation name",
-      "section": "section number",
-      "citation": "full citation",
-      "description": "how this law applies"
-    }],
-    "confidenceScore": 0.0-1.0
-  }],
-  "explanation": {
-    "citations": [{"type": "medical|legal", "title": "source title", "section": "section/article", "authority": "issuing authority", "url": "optional link"}],
-    "explanation": {
-      "english": "Overall analysis explanation in plain English",
-      "hindi": "सरल हिंदी में समग्र विश्लेषण स्पष्टीकरण"
-    },
-    "actionSteps": {
-      "english": ["step 1", "step 2", ...],
-      "hindi": ["कदम 1", "कदम 2", ...]
-    },
-    "confidenceScore": 0.0-1.0,
-    "riskLevel": "low|medium|high"
-  }
-}`;
-
-    const prompt = `${promptBase}\n\n${taskInstruction}\n\n${jsonSchema}`;
-    
-    const userMessage = `${prompt}\n\n${question ? (language === 'hi' ? `उपयोगकर्ता का प्रश्न: ${question}` : `User question: ${question}`) : ''}\n\nAnalyze this PDF document (base64 data provided).`;
+    const userMessage = `${promptBase}\n\n${taskInstruction}\n\n${question ? (language === 'hi' ? `उपयोगकर्ता का प्रश्न: ${question}` : `User question: ${question}`) : ''}\n\nAnalyze this PDF document (base64 data provided).`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -102,56 +63,20 @@ serve(async (req) => {
       throw new Error(data.error?.message || 'Failed to analyze PDF');
     }
 
-    // Parse response from AI Gateway
-    let rawText = data.choices?.[0]?.message?.content || '';
+    // Get plain text response from AI Gateway
+    let analysisText = data.choices?.[0]?.message?.content || '';
     
     // Strip markdown code blocks if present
-    let jsonText = rawText;
-    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      jsonText = jsonMatch[1].trim();
+    const codeBlockMatch = analysisText.match(/```(?:json|text)?\s*([\s\S]*?)\s*```/);
+    if (codeBlockMatch) {
+      analysisText = codeBlockMatch[1].trim();
     }
     
-    let result: unknown = null;
-    let explanation: unknown = null;
-    
-    try {
-      const parsed = JSON.parse(jsonText);
-      
-      // Extract structured result
-      result = {
-        summary: parsed.summary || {
-          overallRisk: 'medium',
-          highRiskFindings: [],
-          notes: parsed.notes || 'Analysis completed',
-          confidenceScore: parsed.confidenceScore || 0.7
-        },
-        clauses: parsed.clauses || []
-      };
-      
-      // Extract explanation
-      explanation = parsed.explanation || {
-        citations: [],
-        explanation: {
-          english: "Document analysis completed",
-          hindi: "दस्तावेज़ विश्लेषण पूर्ण"
-        },
-        actionSteps: {
-          english: ["Review document carefully"],
-          hindi: ["दस्तावेज़ की ध्यानपूर्वक समीक्षा करें"]
-        },
-        confidenceScore: parsed.confidenceScore || 0.7,
-        riskLevel: parsed.summary?.overallRisk || 'medium'
-      };
-    } catch (e) {
-      console.error('JSON parse error:', e);
-      console.log('Raw text:', rawText);
-      // Return raw text as fallback
-      result = null;
-      explanation = null;
-    }
-
-    return new Response(JSON.stringify({ result, explanation, raw: rawText }), {
+    // Return the plain text analysis
+    return new Response(JSON.stringify({ 
+      analysis: analysisText,
+      language: language 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
