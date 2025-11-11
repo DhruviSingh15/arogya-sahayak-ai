@@ -24,8 +24,8 @@ serve(async (req) => {
     }
 
     const promptBase = language === 'hi'
-      ? `आप एक विशेषज्ञ AI जोखिम विश्लेषक हैं जो बीमा पॉलिसियों और स्वास्थ्य रिकॉर्ड का विश्लेषण करके भविष्य की समस्याओं की भविष्यवाणी करते हैं। महत्वपूर्ण: सभी पाठ में सरल, सीधी भाषा का उपयोग करें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
-      : `You are an expert AI risk analyst that predicts future problems by analyzing insurance policies and health records. IMPORTANT: Use simple, straightforward language in all text. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation.`;
+      ? `आप एक विशेषज्ञ AI जोखिम विश्लेषक हैं जो बीमा पॉलिसियों और स्वास्थ्य रिकॉर्ड का विश्लेषण करके भविष्य की समस्याओं की भविष्यवाणी करते हैं। महत्वपूर्ण: सभी पाठ में सरल, सीधी भाषा का उपयोग करें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें। हर विवरण को छोटा रखें (2-3 वाक्य)।`
+      : `You are an expert AI risk analyst that predicts future problems by analyzing insurance policies and health records. IMPORTANT: Use simple, straightforward language in all text. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation. Keep every description SHORT (2-3 sentences).`;
 
     const taskInstruction = language === 'hi'
       ? `कार्य: अपलोड किए गए दस्तावेजों का विश्लेषण करें और भविष्य के दावा अस्वीकरण, अधिकारों के उल्लंघन, और बीमा समस्याओं की भविष्यवाणी करें।\n\nकृपया निम्नलिखित JSON स्कीमा में उत्तर दें:`

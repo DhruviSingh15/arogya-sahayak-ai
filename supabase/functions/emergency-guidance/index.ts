@@ -29,7 +29,7 @@ serve(async (req) => {
         "emergencyRights": ["आपातकाल में आपके मौलिक अधिकार"],
         "contacts": ["सहायक संपर्क नंबर"]
       }
-      महत्वपूर्ण: सभी पाठ फ़ील्ड में सरल, सीधी भाषा का उपयोग करें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
+      महत्वपूर्ण: सभी पाठ फ़ील्ड में सरल, सीधी भाषा का उपयोग करें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें। प्रत्येक फ़ील्ड को बहुत छोटा रखें (2-3 वाक्य)।`
       : `You are an emergency healthcare rights expert. Respond in the following JSON format:
       {
         "urgentActions": ["immediate actions to take"],
@@ -39,7 +39,7 @@ serve(async (req) => {
         "emergencyRights": ["your fundamental rights in emergency"],
         "contacts": ["helpful contact numbers"]
       }
-      IMPORTANT: Use simple, straightforward language in all text fields. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation.`;
+      IMPORTANT: Use simple, straightforward language in all text fields. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation. Keep each field VERY SHORT (2-3 sentences).`;
 
     const situationContext = `
     Emergency Situation: ${situation}

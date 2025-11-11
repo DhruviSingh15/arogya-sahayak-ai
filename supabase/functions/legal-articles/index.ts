@@ -25,70 +25,46 @@ serve(async (req) => {
 
     // Comprehensive prompt for Gemini to provide legal information in plain text
     const prompt = language === 'hi' 
-      ? `भारत में ${topic} के बारे में विस्तृत और व्यापक कानूनी जानकारी प्रदान करें। एक सुव्यवस्थित लेख बनाएं जिसमें शामिल हो:
+      ? `भारत में ${topic} के बारे में संक्षिप्त कानूनी जानकारी प्रदान करें। एक सुव्यवस्थित लेख बनाएं जिसमें शामिल हो:
 
 ${topic} - भारत में कानूनी जानकारी
 
-1. परिचय और अवलोकन
+1. परिचय और अवलोकन (2-3 वाक्य)
    ${topic} क्या है और यह क्यों महत्वपूर्ण है
 
-2. संबंधित कानून और अधिनियम
+2. संबंधित कानून और अधिनियम (2-3 वाक्य)
    प्रमुख कानूनी धाराएं और अधिनियम
-   संवैधानिक प्रावधान
-   हालिया संशोधन (2020-2025)
 
-3. नागरिकों के अधिकार और पात्रता
-   मौलिक अधिकार
-   कानूनी संरक्षण
-   पात्रता मानदंड
+3. नागरिकों के अधिकार (2-3 वाक्य)
+   मौलिक अधिकार और कानूनी संरक्षण
 
-4. सरकारी योजनाएं और लाभ
-   आयुष्मान भारत योजना
-   अन्य संबंधित सरकारी योजनाएं
-   कैसे लाभ उठाएं
+4. सरकारी योजनाएं (2-3 वाक्य)
+   आयुष्मान भारत योजना और अन्य संबंधित योजनाएं
 
-5. उपलब्ध उपाय और प्रक्रिया
-   शिकायत दर्ज करने की प्रक्रिया
-   कानूनी उपाय
-   सहायता केंद्र और हेल्पलाइन
+5. उपलब्ध उपाय (2-3 वाक्य)
+   शिकायत प्रक्रिया और सहायता हेल्पलाइन
 
-6. हालिया विकास और केस स्टडी
-   महत्वपूर्ण न्यायिक निर्णय
-   नीति परिवर्तन
-
-कृपया विस्तृत, व्यावहारिक और सटीक जानकारी दें। सादे पाठ का उपयोग करें, बिना किसी विशेष प्रतीक (जैसे तारे, हैश, या डैश) के। केवल संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
-      : `Provide comprehensive and detailed legal information about ${topic} in India. Create a well-structured article that includes:
+कृपया संक्षिप्त, सटीक जानकारी दें। सादे पाठ का उपयोग करें, बिना किसी विशेष प्रतीक (जैसे तारे, हैश, या डैश) के। केवल संख्याएं और सामान्य विराम चिह्न का उपयोग करें। प्रत्येक अनुभाग को छोटा रखें।`
+      : `Provide concise legal information about ${topic} in India. Create a well-structured article that includes:
 
 ${topic} - Legal Information in India
 
-1. Introduction and Overview
+1. Introduction and Overview (2-3 sentences)
    What is ${topic} and why it matters
 
-2. Relevant Laws and Acts
+2. Relevant Laws and Acts (2-3 sentences)
    Key legal sections and acts
-   Constitutional provisions
-   Recent amendments (2020-2025)
 
-3. Citizens' Rights and Eligibility
-   Fundamental rights
-   Legal protections
-   Eligibility criteria
+3. Citizens' Rights (2-3 sentences)
+   Fundamental rights and legal protections
 
-4. Government Schemes and Benefits
-   Ayushman Bharat Scheme
-   Other related government programs
-   How to access benefits
+4. Government Schemes (2-3 sentences)
+   Ayushman Bharat Scheme and other related programs
 
-5. Available Remedies and Procedures
-   Complaint filing process
-   Legal remedies
-   Support centers and helplines
+5. Available Remedies (2-3 sentences)
+   Complaint process and support helplines
 
-6. Recent Developments and Case Studies
-   Important judicial decisions
-   Policy changes
-
-Please provide detailed, actionable, and accurate information in plain text format. Do NOT use any markdown formatting symbols like asterisks (*), hashes (#), or dashes (-) for bullets or emphasis. Use only numbers and regular punctuation. Write in clear paragraphs with proper line breaks.`;
+Please provide concise, accurate information in plain text format. Do NOT use any markdown formatting symbols like asterisks (*), hashes (#), or dashes (-) for bullets or emphasis. Use only numbers and regular punctuation. Keep each section SHORT.`;
 
     console.log('Fetching from Gemini API...');
 
