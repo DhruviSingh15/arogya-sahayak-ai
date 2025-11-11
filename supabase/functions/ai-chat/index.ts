@@ -33,7 +33,7 @@ serve(async (req) => {
   }
 }
 
-केवल JSON लौटाएं। सटीक कानूनी/चिकित्सा संदर्भों के साथ विश्वसनीयता स्कोर प्रदान करें।`
+महत्वपूर्ण: सभी पाठ फ़ील्ड में सरल, सीधी भाषा का उपयोग करें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें। केवल JSON लौटाएं। सटीक कानूनी/चिकित्सा संदर्भों के साथ विश्वसनीयता स्कोर प्रदान करें।`
       : `You are a health rights and legal assistance expert. Always respond with STRUCTURED JSON containing:
 {
   "response": "main response text",
@@ -52,7 +52,7 @@ serve(async (req) => {
   }
 }
 
-Return ONLY JSON. Provide accurate legal/medical citations with confidence scores.`;
+IMPORTANT: Use simple, straightforward language in all text fields. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation. Return ONLY JSON. Provide accurate legal/medical citations with confidence scores.`;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {

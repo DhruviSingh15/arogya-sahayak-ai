@@ -29,13 +29,13 @@ serve(async (req) => {
 
     // Step 2: Medical reasoning pipeline
     const medicalPrompt = language === 'hi' 
-      ? `स्वास्थ्य विशेषज्ञ के रूप में "${query}" का चिकित्सा विश्लेषण करें। लक्षण, संभावित कारण, और सामान्य सलाह दें।`
-      : `As a medical expert, analyze "${query}" from a health perspective. Provide symptoms analysis, potential causes, and general medical advice.`;
+      ? `स्वास्थ्य विशेषज्ञ के रूप में "${query}" का चिकित्सा विश्लेषण करें। लक्षण, संभावित कारण, और सामान्य सलाह दें। महत्वपूर्ण: सरल, सीधी भाषा में लिखें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
+      : `As a medical expert, analyze "${query}" from a health perspective. Provide symptoms analysis, potential causes, and general medical advice. IMPORTANT: Write in simple, straightforward language. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation.`;
 
     // Step 3: Legal reasoning pipeline  
     const legalPrompt = language === 'hi' 
-      ? `कानूनी विशेषज्ञ के रूप में "${query}" में भारतीय कानून के तहत रोगी के अधिकार, संबंधित धाराएं, और कानूनी विकल्प बताएं।`
-      : `As a legal expert, analyze "${query}" under Indian law to identify patient rights, relevant sections, and legal options available.`;
+      ? `कानूनी विशेषज्ञ के रूप में "${query}" में भारतीय कानून के तहत रोगी के अधिकार, संबंधित धाराएं, और कानूनी विकल्प बताएं। महत्वपूर्ण: सरल, सीधी भाषा में लिखें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
+      : `As a legal expert, analyze "${query}" under Indian law to identify patient rights, relevant sections, and legal options available. IMPORTANT: Write in simple, straightforward language. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation.`;
 
     // Get medical analysis
     const medicalResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -186,7 +186,7 @@ Return JSON format:
 
 मूल प्रश्न: ${query}
 
-संयुक्त सलाह दें जो दोनों क्षेत्रों को संतुलित करे।`
+संयुक्त सलाह दें जो दोनों क्षेत्रों को संतुलित करे। महत्वपूर्ण: सरल, सीधी भाषा में लिखें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
       : `Provide unified advice combining medical and legal perspectives:
 
 Medical Summary (weight ${alpha}): ${medicalStructured.summary}
@@ -194,7 +194,7 @@ Legal Summary (weight ${beta}): ${legalStructured.summary}
 
 Original Query: ${query}
 
-Give combined advice that balances both domains.`;
+Give combined advice that balances both domains. IMPORTANT: Write in simple, straightforward language. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation.`;
 
     const unifiedResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

@@ -28,7 +28,8 @@ serve(async (req) => {
         "nearbyHospitals": ["सरकारी अस्पताल जो इलाज करने को बाध्य हैं"],
         "emergencyRights": ["आपातकाल में आपके मौलिक अधिकार"],
         "contacts": ["सहायक संपर्क नंबर"]
-      }`
+      }
+      महत्वपूर्ण: सभी पाठ फ़ील्ड में सरल, सीधी भाषा का उपयोग करें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें।`
       : `You are an emergency healthcare rights expert. Respond in the following JSON format:
       {
         "urgentActions": ["immediate actions to take"],
@@ -37,7 +38,8 @@ serve(async (req) => {
         "nearbyHospitals": ["government hospitals obligated to treat"],
         "emergencyRights": ["your fundamental rights in emergency"],
         "contacts": ["helpful contact numbers"]
-      }`;
+      }
+      IMPORTANT: Use simple, straightforward language in all text fields. Do NOT use any special symbols (*, #, -) for formatting. Use only plain text, numbers, and regular punctuation.`;
 
     const situationContext = `
     Emergency Situation: ${situation}
