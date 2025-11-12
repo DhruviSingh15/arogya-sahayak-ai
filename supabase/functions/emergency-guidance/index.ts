@@ -56,23 +56,47 @@ serve(async (req) => {
     Focus on immediate, actionable guidance with ready-to-use legal notices.
     `;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `${systemPrompt}\n\n${situationContext}`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 2000,
+    // Retry with backoff and fallback model when overloaded
+    const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    let response: Response | null = null;
+    let lastErrText = '';
+
+    for (const model of models) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `${systemPrompt}\n\n${situationContext}`
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 2000,
+            }
+          }),
+        });
+
+        if (resp.ok) { response = resp; break; }
+        try { lastErrText = await resp.text(); } catch { lastErrText = ''; }
+        if (resp.status === 503 || resp.status === 429) {
+          console.error('Gemini API retryable error:', resp.status, lastErrText);
+          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+          continue;
         }
-      }),
-    });
+        console.error('Gemini API error (non-retry):', resp.status, lastErrText);
+        break;
+      }
+      if (response) break;
+    }
+
+    if (!response) {
+      throw new Error('Service temporarily unavailable. Please try again.');
+    }
 
     const data = await response.json();
     

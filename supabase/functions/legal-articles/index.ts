@@ -69,28 +69,46 @@ Please provide concise, accurate information in plain text format. Do NOT use an
     console.log('Fetching from Gemini API...');
 
     // Get comprehensive legal information from Gemini
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 3000,
-        }
-      }),
-    });
+    // Retry with backoff and fallback model when overloaded
+    const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    let geminiResponse: Response | null = null;
+    let lastErrText = '';
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error(`Gemini API error (${geminiResponse.status}):`, errorText);
-      throw new Error(`Gemini API failed: ${geminiResponse.status}`);
+    for (const model of models) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 3000,
+            }
+          }),
+        });
+
+        if (resp.ok) { geminiResponse = resp; break; }
+        try { lastErrText = await resp.text(); } catch { lastErrText = ''; }
+        if (resp.status === 503 || resp.status === 429) {
+          console.error(`Gemini API retryable error (${resp.status}):`, lastErrText);
+          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+          continue;
+        }
+        console.error(`Gemini API error (${resp.status}):`, lastErrText);
+        break;
+      }
+      if (geminiResponse) break;
+    }
+
+    if (!geminiResponse) {
+      throw new Error('Service temporarily unavailable. Please try again.');
     }
 
     const geminiData = await geminiResponse.json();
