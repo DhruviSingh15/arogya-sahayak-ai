@@ -53,40 +53,44 @@ serve(async (req) => {
 });
 
 async function generateQueryEmbedding(query: string): Promise<number[]> {
-  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!openaiApiKey) {
-    throw new Error('OpenAI API key not found');
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!geminiApiKey) {
+    throw new Error('Gemini API key not found');
   }
 
   console.log('Generating query embedding...');
 
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openaiApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'text-embedding-3-small',
-      input: query,
-    }),
-  });
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiApiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'models/text-embedding-004',
+        content: {
+          parts: [{ text: query }]
+        }
+      }),
+    }
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`OpenAI embedding error (${response.status}):`, errorText);
+    console.error(`Gemini embedding error (${response.status}):`, errorText);
     throw new Error(`Failed to generate embedding: ${response.status}`);
   }
 
   const data = await response.json();
   
-  if (!data.data || !data.data[0] || !data.data[0].embedding) {
+  if (!data.embedding || !data.embedding.values) {
     console.error('Invalid embedding response:', JSON.stringify(data));
-    throw new Error('Invalid embedding response from OpenAI');
+    throw new Error('Invalid embedding response from Gemini');
   }
 
   console.log('Query embedding generated successfully');
-  return data.data[0].embedding;
+  return data.embedding.values;
 }
 
 async function performSemanticSearch(

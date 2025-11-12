@@ -163,8 +163,8 @@ async function ingestDocument(data: any) {
 }
 
 async function generateEmbeddings(documentId: string, content: string) {
-  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!openaiApiKey) throw new Error('OpenAI API key not found');
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!geminiApiKey) throw new Error('Gemini API key not found');
 
   // Chunk content (simple splitting by paragraphs/sentences)
   const chunks = chunkText(content, 500); // ~500 tokens per chunk
@@ -172,33 +172,37 @@ async function generateEmbeddings(documentId: string, content: string) {
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
     
-    // Generate embedding
-    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: chunk,
-      }),
-    });
+    // Generate embedding using Gemini
+    const embeddingResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'models/text-embedding-004',
+          content: {
+            parts: [{ text: chunk }]
+          }
+        }),
+      }
+    );
 
     if (!embeddingResponse.ok) {
       const errorText = await embeddingResponse.text();
-      console.error(`OpenAI API error (status ${embeddingResponse.status}):`, errorText);
+      console.error(`Gemini API error (status ${embeddingResponse.status}):`, errorText);
       throw new Error(`Failed to generate embeddings: ${embeddingResponse.status} - ${errorText}`);
     }
 
     const embeddingData = await embeddingResponse.json();
     
-    if (!embeddingData.data || !embeddingData.data[0] || !embeddingData.data[0].embedding) {
+    if (!embeddingData.embedding || !embeddingData.embedding.values) {
       console.error('Invalid embedding response:', JSON.stringify(embeddingData));
       throw new Error('Invalid response from embedding API');
     }
     
-    const embedding = embeddingData.data[0].embedding;
+    const embedding = embeddingData.embedding.values;
 
     // Store chunk with embedding
     await supabase
