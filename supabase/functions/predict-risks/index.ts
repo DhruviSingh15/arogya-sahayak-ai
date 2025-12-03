@@ -13,15 +13,17 @@ serve(async (req) => {
 
   try {
     const { files, language = 'en' } = await req.json();
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not found');
+    if (!geminiApiKey) {
+      throw new Error('GEMINI_API_KEY not found');
     }
 
     if (!files || files.length === 0) {
       throw new Error('No files provided for analysis');
     }
+
+    console.log(`Analyzing ${files.length} files...`);
 
     const promptBase = language === 'hi'
       ? `आप एक विशेषज्ञ AI जोखिम विश्लेषक हैं जो बीमा पॉलिसियों और स्वास्थ्य रिकॉर्ड का विश्लेषण करके भविष्य की समस्याओं की भविष्यवाणी करते हैं। महत्वपूर्ण: सभी पाठ में सरल, सीधी भाषा का उपयोग करें। किसी भी विशेष प्रतीक (*, #, -) का उपयोग न करें। केवल सादा पाठ, संख्याएं और सामान्य विराम चिह्न का उपयोग करें। हर विवरण को छोटा रखें (2-3 वाक्य)।`
@@ -29,7 +31,7 @@ serve(async (req) => {
 
     const taskInstruction = language === 'hi'
       ? `कार्य: अपलोड किए गए दस्तावेजों का विश्लेषण करें और भविष्य के दावा अस्वीकरण, अधिकारों के उल्लंघन, और बीमा समस्याओं की भविष्यवाणी करें।\n\nकृपया निम्नलिखित JSON स्कीमा में उत्तर दें:`
-      : `Task: Analyze the uploaded documents and predict future claim rejections, rights violations, and insurance issues.\n\nPlease respond in the following JSON schema:`;
+      : `Task: Analyze the uploaded documents thoroughly and predict future claim rejections, rights violations, and insurance issues based on the actual content.\n\nPlease respond in the following JSON schema:`;
 
     const jsonSchema = `{
   "overallRiskScore": 0-100,
@@ -61,43 +63,66 @@ serve(async (req) => {
   "riskLevel": "low|medium|high"
 }`;
 
-    const prompt = `${promptBase}\n\n${taskInstruction}\n\nRisk Analysis Schema:\n${jsonSchema}\n\nExplanation Schema:\n${explanationSchema}\n\nAnalyze for:\n1. Policy exclusions that could lead to claim rejection\n2. Pre-existing condition clauses\n3. Coverage gaps and limitations\n4. Waiting periods and their implications\n5. Premium increase triggers\n6. Terms that could violate patient rights\n7. Potential insurance fraud triggers\n8. Documentation requirements that could cause issues`;
+    const prompt = `${promptBase}\n\n${taskInstruction}\n\nRisk Analysis Schema:\n${jsonSchema}\n\nExplanation Schema:\n${explanationSchema}\n\nAnalyze these documents for:\n1. Policy exclusions that could lead to claim rejection\n2. Pre-existing condition clauses\n3. Coverage gaps and limitations\n4. Waiting periods and their implications\n5. Premium increase triggers\n6. Terms that could violate patient rights\n7. Potential insurance fraud triggers\n8. Documentation requirements that could cause issues\n\nRESPOND ONLY WITH VALID JSON. DO NOT include any text before or after the JSON.`;
 
-    const filesSummary = files.map((f: any, i: number) => 
-      `Document ${i + 1}: ${f.type || 'application/pdf'} (base64 data provided)`
-    ).join('\n');
+    // Build multimodal content parts for Gemini
+    const contentParts: any[] = [{ text: prompt }];
+    
+    // Add each file as inline data for Gemini to analyze
+    for (const file of files) {
+      const mimeType = file.type || 'application/pdf';
+      
+      // Gemini supports image types and PDF
+      if (mimeType.startsWith('image/') || mimeType === 'application/pdf') {
+        contentParts.push({
+          inline_data: {
+            mime_type: mimeType,
+            data: file.data
+          }
+        });
+        console.log(`Added file: ${file.name} (${mimeType})`);
+      }
+    }
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are an expert AI risk analyst specializing in insurance policy and health record analysis.' },
-          { role: 'user', content: `${prompt}\n\n${filesSummary}` }
-        ],
-        temperature: 0.3,
-        max_tokens: 3000
-      })
-    });
+    console.log(`Sending ${contentParts.length - 1} files to Gemini for analysis...`);
+
+    // Use Gemini API directly for multimodal support
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: contentParts
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 4000,
+          }
+        })
+      }
+    );
 
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('Gemini API error:', JSON.stringify(data));
+      
       if (response.status === 429) {
         throw new Error('Rate limit exceeded. Please try again later.');
       }
-      if (response.status === 402) {
-        throw new Error('Payment required. Please add credits to your workspace.');
+      if (response.status === 503) {
+        throw new Error('Service temporarily unavailable. Please try again.');
       }
-      console.error('AI Gateway error:', data);
-      throw new Error(data.error?.message || 'Failed to analyze risks');
+      
+      throw new Error(data.error?.message || 'Failed to analyze documents');
     }
 
-    let rawText = data.choices?.[0]?.message?.content || '';
+    let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('Raw response length:', rawText.length);
     
     // Strip markdown code blocks if present
     let jsonText = rawText;
@@ -105,7 +130,17 @@ serve(async (req) => {
     if (jsonMatch) {
       jsonText = jsonMatch[1].trim();
     }
-    console.log('Cleaned response:', jsonText.substring(0, 500));
+    
+    // Also try to find JSON object directly
+    if (!jsonText.startsWith('{')) {
+      const jsonStartIndex = rawText.indexOf('{');
+      const jsonEndIndex = rawText.lastIndexOf('}');
+      if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+        jsonText = rawText.substring(jsonStartIndex, jsonEndIndex + 1);
+      }
+    }
+    
+    console.log('Cleaned response preview:', jsonText.substring(0, 300));
 
     let result = null;
     let explanation = null;
@@ -146,9 +181,11 @@ serve(async (req) => {
         confidenceScore: parsed.confidenceScore || 0.75,
         riskLevel: parsed.riskLevel || (result.overallRiskScore > 70 ? 'high' : result.overallRiskScore > 40 ? 'medium' : 'low')
       };
+      
+      console.log('Successfully parsed risk analysis with', result.predictions.length, 'predictions');
     } catch (parseError) {
       console.error('JSON parsing failed:', parseError);
-      console.log('Failed text:', rawText.substring(0, 300));
+      console.log('Failed text preview:', rawText.substring(0, 500));
       
       // Fallback response with meaningful defaults
       result = {
@@ -159,14 +196,15 @@ serve(async (req) => {
           riskLevel: 'medium',
           description: language === 'hi' 
             ? 'दस्तावेज़ विश्लेषण में त्रुटि। कृपया पुनः प्रयास करें।'
-            : 'Error in document analysis. Please try again.',
+            : 'Error in document analysis. Please try again with a clearer document.',
           likelihood: 50,
           timeline: '1-3 months',
           impact: language === 'hi' 
             ? 'विश्लेषण अपूर्ण'
             : 'Analysis incomplete',
           preventiveActions: [
-            language === 'hi' ? 'दस्तावेज़ की गुणवत्ता जांचें' : 'Check document quality'
+            language === 'hi' ? 'दस्तावेज़ की गुणवत्ता जांचें' : 'Check document quality',
+            language === 'hi' ? 'स्पष्ट स्कैन अपलोड करें' : 'Upload a clear scan'
           ],
           evidence: []
         }],
@@ -178,12 +216,12 @@ serve(async (req) => {
       explanation = {
         citations: [],
         explanation: {
-          english: "Document analysis encountered technical issues",
-          hindi: "दस्तावेज़ विश्लेषण में तकनीकी समस्या"
+          english: "Document analysis encountered technical issues. The AI could not parse the document content properly.",
+          hindi: "दस्तावेज़ विश्लेषण में तकनीकी समस्या। AI दस्तावेज़ सामग्री को ठीक से पार्स नहीं कर सका।"
         },
         actionSteps: {
-          english: ["Try clearer documents", "Ensure complete files"],
-          hindi: ["स्पष्ट दस्तावेज़ प्रयास करें", "पूर्ण फाइलें सुनिश्चित करें"]
+          english: ["Try clearer documents", "Ensure complete files", "Use high-resolution scans"],
+          hindi: ["स्पष्ट दस्तावेज़ प्रयास करें", "पूर्ण फाइलें सुनिश्चित करें", "उच्च-रिज़ॉल्यूशन स्कैन का उपयोग करें"]
         },
         confidenceScore: 0.3,
         riskLevel: 'medium'
