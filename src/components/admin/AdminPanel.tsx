@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useDocumentIngestion, DocumentIngestionRequest } from '@/hooks/useDocumentIngestion';
-import { Plus, Upload, Link, Database, X } from 'lucide-react';
+import { Plus, Upload, Link, Database, X, Scale } from 'lucide-react';
 import { FileUpload } from '../document/FileUpload';
+import { LegalDataManager } from './LegalDataManager';
 
 interface Language {
   code: 'en' | 'hi';
@@ -116,18 +117,22 @@ export function AdminPanel({ language }: AdminPanelProps) {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="manual" className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                {isEnglish ? 'Manual Entry' : 'मैनुअल एंट्री'}
+                {isEnglish ? 'Manual' : 'मैनुअल'}
               </TabsTrigger>
               <TabsTrigger value="url" className="flex items-center gap-2">
                 <Link className="h-4 w-4" />
-                {isEnglish ? 'From URL' : 'URL से'}
+                {isEnglish ? 'URL' : 'URL'}
               </TabsTrigger>
               <TabsTrigger value="upload" className="flex items-center gap-2">
                 <Upload className="h-4 w-4" />
-                {isEnglish ? 'File Upload' : 'फ़ाइल अपलोड'}
+                {isEnglish ? 'Upload' : 'अपलोड'}
+              </TabsTrigger>
+              <TabsTrigger value="legal" className="flex items-center gap-2">
+                <Scale className="h-4 w-4" />
+                {isEnglish ? 'Legal Sources' : 'कानूनी स्रोत'}
               </TabsTrigger>
             </TabsList>
 
@@ -354,6 +359,10 @@ export function AdminPanel({ language }: AdminPanelProps) {
                   console.log('Document uploaded successfully:', result);
                 }}
               />
+            </TabsContent>
+
+            <TabsContent value="legal" className="space-y-4 mt-6">
+              <LegalDataManager language={language} />
             </TabsContent>
           </Tabs>
         </CardContent>
